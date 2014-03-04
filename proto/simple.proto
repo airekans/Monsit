@@ -1,0 +1,9 @@
+message SimpleRequest {
+    required string name = 1;
+    required int32 id = 2;
+}
+
+message SimpleResponse {
+    required int32 return_code = 1;
+    required string msg = 2;
+}
