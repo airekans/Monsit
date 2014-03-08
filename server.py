@@ -1,10 +1,7 @@
 import gevent.server
 import struct
 from proto import simple_pb2
-
-
-def serialize_message(msg):
-    return ''
+import protocodec
 
 
 def handle_simple_req(req):
@@ -14,6 +11,12 @@ def handle_simple_req(req):
     rsp.return_code = 0
     rsp.msg = 'success'
     return rsp
+
+
+def print_binary_string(bin_str):
+    for c in bin_str:
+        print ord(c),
+    print ''
 
 
 def handle(socket, addr):
@@ -39,11 +42,13 @@ def handle(socket, addr):
                 cur_index += 2  # skip the first 2 bytes
                 break
 
-            buf_size = struct.unpack('!I', mem_content[cur_index + 2: cur_index + 6])
+            (buf_size,) = struct.unpack('!I',
+                                        mem_content[cur_index + 2: cur_index + 6].tobytes())
             if len(mem_content[cur_index + 6:]) < buf_size:
                 break
 
-            pb_buf = mem_content[cur_index + 6: cur_index + buf_size].tobytes()
+            pb_buf = mem_content[cur_index + 6: cur_index + 6 + buf_size].tobytes()
+            print_binary_string(pb_buf)
             req = simple_pb2.SimpleRequest()
             try:
                 req.ParseFromString(pb_buf)
@@ -56,7 +61,7 @@ def handle(socket, addr):
 
             if is_parsed_req:
                 rsp = handle_simple_req(req)
-                serialized_rsp = serialize_message(rsp)
+                serialized_rsp = protocodec.serialize_message(rsp)
                 socket.send(serialized_rsp)
 
         if cur_index > 0:
