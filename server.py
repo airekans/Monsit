@@ -33,6 +33,7 @@ def handle(socket, addr):
             if len(mem_content[cur_index:]) < 6:
                 break
             elif mem_content[cur_index:cur_index + 2] != 'PB':
+                cur_index += 2  # skip the first 2 bytes
                 break
 
             buf_size = struct.unpack('!I', mem_content[cur_index + 2: cur_index + 6])
@@ -43,14 +44,17 @@ def handle(socket, addr):
             req = simple_pb2.SimpleRequest()
             try:
                 req.ParseFromString(pb_buf)
+                is_parsed_req = True
             except simple_pb2.message.DecodeError:
-                pass
+                print 'pb decode error, skip this message'
+                is_parsed_req = False
             finally:
                 cur_index += buf_size + 6
 
-            rsp = handle_simple_req(req)
-            serialized_rsp = serialize_message(rsp)
-            socket.send(serialized_rsp)
+            if is_parsed_req:
+                rsp = handle_simple_req(req)
+                serialized_rsp = serialize_message(rsp)
+                socket.send(serialized_rsp)
 
         if cur_index > 0:
             content = content[cur_index:]
