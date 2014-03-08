@@ -8,8 +8,11 @@ def serialize_message(msg):
 
 
 def handle_simple_req(req):
-    # TODO: add implementation
+    print 'req.name', req.name, 'req.id', req.id
+
     rsp = simple_pb2.SimpleResponse()
+    rsp.return_code = 0
+    rsp.msg = 'success'
     return rsp
 
 
