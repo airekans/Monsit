@@ -48,26 +48,20 @@ def handle(socket, addr):
                 break
 
             pb_buf = mem_content[cur_index + 6: cur_index + 6 + buf_size].tobytes()
-            print_binary_string(pb_buf)
-            req = simple_pb2.SimpleRequest()
-            try:
-                req.ParseFromString(pb_buf)
-                is_parsed_req = True
-            except simple_pb2.message.DecodeError:
+            cur_index += buf_size + 6
+            req = protocodec.parse_message(pb_buf)
+            if req is None:
                 print 'pb decode error, skip this message'
-                is_parsed_req = False
-            finally:
-                cur_index += buf_size + 6
+                break
 
-            if is_parsed_req:
-                rsp = handle_simple_req(req)
-                serialized_rsp = protocodec.serialize_message(rsp)
-                socket.send(serialized_rsp)
+            rsp = handle_simple_req(req)
+            serialized_rsp = protocodec.serialize_message(rsp)
+            socket.send(serialized_rsp)
 
         if cur_index > 0:
             content = content[cur_index:]
 
-    print addr, 'has closed'
+    print addr, 'has disconnected'
 
 if __name__ == '__main__':
     server = gevent.server.StreamServer(('127.0.0.1', 30002), handle)

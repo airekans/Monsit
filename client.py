@@ -1,7 +1,7 @@
 import gevent
 from proto import simple_pb2
 import struct
-
+import protocodec
 
 MONSIT_SERVER_ADDR = ('127.0.0.1', 30002)
 
@@ -29,10 +29,8 @@ if __name__ == '__main__':
 
     while True:
         req = collect_machine_info()
-        pb_buf = req.SerializeToString()
-        print_binary_string(pb_buf)
-        pb_buf_len = struct.pack('!I', len(pb_buf))
-        req_buf = 'PB' + pb_buf_len + pb_buf
+        req_buf = protocodec.serialize_message(req)
+
         sock.send(req_buf)
         rsp_buf = sock.recv(1024)
         while len(rsp_buf) < 6:
@@ -45,8 +43,7 @@ if __name__ == '__main__':
         while len(rsp_buf) < 6 + rsp_len:
             rsp_buf += sock.recv(1024)
 
-        rsp = simple_pb2.SimpleResponse()
-        rsp.ParseFromString(rsp_buf[6:6 + rsp_len])
+        rsp = protocodec.parse_message(rsp_buf[6:6 + rsp_len])
         handle_response(rsp)
 
         gevent.sleep(5)
