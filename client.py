@@ -2,14 +2,26 @@ import gevent
 from proto import simple_pb2
 import struct
 import protocodec
+import socket
+import fcntl
+
 
 MONSIT_SERVER_ADDR = ('127.0.0.1', 30002)
 
 
+def get_ip_address(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(
+        s.fileno(),
+        0x8915,  # SIOCGIFADDR
+        struct.pack('256s', ifname[:15])
+    )[20:24])
+
+
 def collect_machine_info():
     machine_info = simple_pb2.SimpleRequest()
-    machine_info.name = 'client'
-    machine_info.id = 2
+    machine_info.host_name = socket.gethostname()
+    machine_info.host_ip = get_ip_address('wlan0')
     return machine_info
 
 

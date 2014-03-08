@@ -2,9 +2,15 @@ message MetaInfo {
     required string msg_name = 1;
 }
 
-message SimpleRequest {
+message CPUInfo {
     required string name = 1;
-    required int32 id = 2;
+    required int32 usage_rate = 2;
+}
+
+message SimpleRequest {
+    required string host_name = 1;
+    required string host_ip = 2;
+    repeated CPUInfo cpu_infos = 3;
 }
 
 message SimpleResponse {
