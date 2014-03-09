@@ -3,25 +3,24 @@ from proto import simple_pb2
 import struct
 import protocodec
 import socket
-import fcntl
+import net
 
 
 MONSIT_SERVER_ADDR = ('127.0.0.1', 30002)
 
 
-def get_ip_address(ifname):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    return socket.inet_ntoa(fcntl.ioctl(
-        s.fileno(),
-        0x8915,  # SIOCGIFADDR
-        struct.pack('256s', ifname[:15])
-    )[20:24])
-
-
 def collect_machine_info():
     machine_info = simple_pb2.SimpleRequest()
     machine_info.host_name = socket.gethostname()
-    machine_info.host_ip = get_ip_address('wlan0')
+
+    net_infos = net.get_netdevs()
+    for dev_name, dev_info in net_infos.iteritems():
+        net_info = machine_info.net_infos.add()
+        net_info.name = dev_name
+        net_info.ip = dev_info.ip
+        net_info.recv_MB = dev_info.recv_MB
+        net_info.send_MB = dev_info.send_MB
+
     return machine_info
 
 

@@ -5,7 +5,7 @@ import protocodec
 
 
 def handle_simple_req(req):
-    print 'host_name', req.host_name, 'host_ip', req.host_ip
+    print req
 
     rsp = simple_pb2.SimpleResponse()
     rsp.return_code = 0

@@ -11,7 +11,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='simple.proto',
   package='',
-  serialized_pb='\n\x0csimple.proto\"\x1c\n\x08MetaInfo\x12\x10\n\x08msg_name\x18\x01 \x02(\t\"+\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nusage_rate\x18\x02 \x02(\x05\"P\n\rSimpleRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x0f\n\x07host_ip\x18\x02 \x02(\t\x12\x1b\n\tcpu_infos\x18\x03 \x03(\x0b\x32\x08.CPUInfo\"2\n\x0eSimpleResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t')
+  serialized_pb='\n\x0csimple.proto\"\x1c\n\x08MetaInfo\x12\x10\n\x08msg_name\x18\x01 \x02(\t\"+\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nusage_rate\x18\x02 \x02(\x05\"E\n\x07NetInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\n\n\x02ip\x18\x02 \x02(\t\x12\x0f\n\x07recv_MB\x18\x03 \x02(\x01\x12\x0f\n\x07send_MB\x18\x04 \x02(\x01\"\\\n\rSimpleRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x1b\n\tcpu_infos\x18\x02 \x03(\x0b\x32\x08.CPUInfo\x12\x1b\n\tnet_infos\x18\x03 \x03(\x0b\x32\x08.NetInfo\"2\n\x0eSimpleResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t')
 
 
 
@@ -79,6 +79,55 @@ _CPUINFO = descriptor.Descriptor(
 )
 
 
+_NETINFO = descriptor.Descriptor(
+  name='NetInfo',
+  full_name='NetInfo',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    descriptor.FieldDescriptor(
+      name='name', full_name='NetInfo.name', index=0,
+      number=1, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='ip', full_name='NetInfo.ip', index=1,
+      number=2, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='recv_MB', full_name='NetInfo.recv_MB', index=2,
+      number=3, type=1, cpp_type=5, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='send_MB', full_name='NetInfo.send_MB', index=3,
+      number=4, type=1, cpp_type=5, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=91,
+  serialized_end=160,
+)
+
+
 _SIMPLEREQUEST = descriptor.Descriptor(
   name='SimpleRequest',
   full_name='SimpleRequest',
@@ -94,14 +143,14 @@ _SIMPLEREQUEST = descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='host_ip', full_name='SimpleRequest.host_ip', index=1,
-      number=2, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=unicode("", "utf-8"),
+      name='cpu_infos', full_name='SimpleRequest.cpu_infos', index=1,
+      number=2, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='cpu_infos', full_name='SimpleRequest.cpu_infos', index=2,
+      name='net_infos', full_name='SimpleRequest.net_infos', index=2,
       number=3, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
@@ -116,8 +165,8 @@ _SIMPLEREQUEST = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=91,
-  serialized_end=171,
+  serialized_start=162,
+  serialized_end=254,
 )
 
 
@@ -151,13 +200,15 @@ _SIMPLERESPONSE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=173,
-  serialized_end=223,
+  serialized_start=256,
+  serialized_end=306,
 )
 
 _SIMPLEREQUEST.fields_by_name['cpu_infos'].message_type = _CPUINFO
+_SIMPLEREQUEST.fields_by_name['net_infos'].message_type = _NETINFO
 DESCRIPTOR.message_types_by_name['MetaInfo'] = _METAINFO
 DESCRIPTOR.message_types_by_name['CPUInfo'] = _CPUINFO
+DESCRIPTOR.message_types_by_name['NetInfo'] = _NETINFO
 DESCRIPTOR.message_types_by_name['SimpleRequest'] = _SIMPLEREQUEST
 DESCRIPTOR.message_types_by_name['SimpleResponse'] = _SIMPLERESPONSE
 
@@ -172,6 +223,12 @@ class CPUInfo(message.Message):
   DESCRIPTOR = _CPUINFO
   
   # @@protoc_insertion_point(class_scope:CPUInfo)
+
+class NetInfo(message.Message):
+  __metaclass__ = reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _NETINFO
+  
+  # @@protoc_insertion_point(class_scope:NetInfo)
 
 class SimpleRequest(message.Message):
   __metaclass__ = reflection.GeneratedProtocolMessageType

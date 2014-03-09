@@ -7,10 +7,17 @@ message CPUInfo {
     required int32 usage_rate = 2;
 }
 
+message NetInfo {
+    required string name = 1;
+    required string ip = 2;
+    required double recv_MB = 3;
+    required double send_MB = 4;
+}
+
 message SimpleRequest {
     required string host_name = 1;
-    required string host_ip = 2;
-    repeated CPUInfo cpu_infos = 3;
+    repeated CPUInfo cpu_infos = 2;
+    repeated NetInfo net_infos = 3;
 }
 
 message SimpleResponse {
