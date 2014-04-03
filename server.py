@@ -2,6 +2,7 @@ import gevent.server
 import struct
 from proto import simple_pb2
 import protocodec
+import db
 
 
 def handle_simple_req(req):
@@ -64,5 +65,6 @@ def handle(socket, addr):
     print addr, 'has disconnected'
 
 if __name__ == '__main__':
+    db.init()
     server = gevent.server.StreamServer(('127.0.0.1', 30002), handle)
     server.serve_forever()
