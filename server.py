@@ -8,6 +8,9 @@ import db
 def handle_simple_req(req):
     print req
 
+    if len(req.net_infos) > 0:
+        db.create_host_tables(req.net_infos[0].ip)
+
     rsp = simple_pb2.SimpleResponse()
     rsp.return_code = 0
     rsp.msg = 'success'
