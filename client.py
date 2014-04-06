@@ -5,6 +5,7 @@ import protocodec
 import socket
 import net
 import time
+import cpu
 
 
 MONSIT_SERVER_ADDR = ('127.0.0.1', 30002)
@@ -13,6 +14,13 @@ MONSIT_SERVER_ADDR = ('127.0.0.1', 30002)
 def collect_machine_info():
     machine_info = simple_pb2.SimpleRequest()
     machine_info.host_name = socket.gethostname()
+
+    cpu_stats = cpu.get_cpu_stat()
+    for name, stat in cpu_stats.iteritems():
+        if name.startswith('cpu'):
+            cpu_info = machine_info.cpu_infos.add()
+            cpu_info.name = name
+            cpu_info.usage_rate = 90
 
     net_infos = net.get_netdevs()
     for dev_name, dev_info in net_infos.iteritems():
