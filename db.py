@@ -1,4 +1,5 @@
 import mysql.connector
+import datetime
 
 _MYSQL_SERVER_ADDR = '127.0.0.1'
 _MYSQL_USER = 'monsit'
@@ -32,7 +33,7 @@ def create_host_tables(ip):
         '  `id` int(11) NOT NULL AUTO_INCREMENT,'
         '  `name` varchar(14) NOT NULL,'
         '  `usage_rate` int(11) NOT NULL,'
-        '  `date` date NOT NULL,'
+        '  `datetime` datetime NOT NULL,'
         '  PRIMARY KEY (`id`)'
         ') ENGINE=InnoDB'
     ) % get_host_table_name(ip, 'cpu')
@@ -44,8 +45,8 @@ def create_host_tables(ip):
         '  `name` varchar(14) NOT NULL,'
         '  `ip` varchar(20) NOT NULL,'
         '  `datetime` datetime NOT NULL,'
-        '  `recv_MB` int(11) NOT NULL,'
-        '  `send_MB` int(11) NOT NULL,'
+        '  `recv_byte` bigint NOT NULL,'
+        '  `send_byte` bigint NOT NULL,'
         '  PRIMARY KEY (`id`)'
         ') ENGINE=InnoDB'
     ) % get_host_table_name(ip, 'net')
@@ -57,8 +58,50 @@ def insert_host_info(host_info):
     if len(host_info.net_infos) == 0:
         return False
 
-    host_ip = host_info.net_infos[0]
+    host_ip = host_info.net_infos[0].ip
+    report_time = datetime.datetime.fromtimestamp(host_info.datetime)
+    report_time = report_time.strftime("%Y-%m-%d %H:%M:%S")
     cpu_tbl_name = get_host_table_name(host_ip, 'cpu')
     net_tbl_name = get_host_table_name(host_ip, 'net')
+
+    cpu_insert_stmt = (
+        "INSERT INTO %s SET"
+        " name='%s',"
+        " usage_rate=%d,"
+        " datetime='%s'"
+    )
+    for cpu_info in host_info.cpu_infos:
+        stmt = cpu_insert_stmt % (cpu_tbl_name,
+                                  cpu_info.name,
+                                  cpu_info.usage_rate,
+                                  report_time)
+        try:
+            _cursor.execute(stmt)
+        except mysql.connector.Error as err:
+            print(err.msg)
+            return False
+
+    net_insert_stmt = (
+        "INSERT INTO %s SET"
+        " name='%s',"
+        " ip='%s',"
+        " datetime='%s',"
+        " recv_byte=%d,"
+        " send_byte=%d"
+    )
+    for net_info in host_info.net_infos:
+        stmt = net_insert_stmt % (net_tbl_name,
+                                  net_info.name,
+                                  net_info.ip,
+                                  report_time,
+                                  net_info.recv_byte,
+                                  net_info.send_byte)
+        try:
+            _cursor.execute(stmt)
+        except mysql.connector.Error as err:
+            print(err.msg)
+            return False
+
+    return True
 
 

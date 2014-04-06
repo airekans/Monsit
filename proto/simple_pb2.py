@@ -11,7 +11,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='simple.proto',
   package='',
-  serialized_pb='\n\x0csimple.proto\"\x1c\n\x08MetaInfo\x12\x10\n\x08msg_name\x18\x01 \x02(\t\"+\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nusage_rate\x18\x02 \x02(\x05\"E\n\x07NetInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\n\n\x02ip\x18\x02 \x02(\t\x12\x0f\n\x07recv_MB\x18\x03 \x02(\x01\x12\x0f\n\x07send_MB\x18\x04 \x02(\x01\"\\\n\rSimpleRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x1b\n\tcpu_infos\x18\x02 \x03(\x0b\x32\x08.CPUInfo\x12\x1b\n\tnet_infos\x18\x03 \x03(\x0b\x32\x08.NetInfo\"2\n\x0eSimpleResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t')
+  serialized_pb='\n\x0csimple.proto\"\x1c\n\x08MetaInfo\x12\x10\n\x08msg_name\x18\x01 \x02(\t\"+\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nusage_rate\x18\x02 \x02(\x05\"I\n\x07NetInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\n\n\x02ip\x18\x02 \x02(\t\x12\x11\n\trecv_byte\x18\x03 \x02(\x03\x12\x11\n\tsend_byte\x18\x04 \x02(\x03\"n\n\rSimpleRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12\x1b\n\tcpu_infos\x18\x03 \x03(\x0b\x32\x08.CPUInfo\x12\x1b\n\tnet_infos\x18\x04 \x03(\x0b\x32\x08.NetInfo\"2\n\x0eSimpleResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t')
 
 
 
@@ -101,15 +101,15 @@ _NETINFO = descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='recv_MB', full_name='NetInfo.recv_MB', index=2,
-      number=3, type=1, cpp_type=5, label=2,
+      name='recv_byte', full_name='NetInfo.recv_byte', index=2,
+      number=3, type=3, cpp_type=2, label=2,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='send_MB', full_name='NetInfo.send_MB', index=3,
-      number=4, type=1, cpp_type=5, label=2,
+      name='send_byte', full_name='NetInfo.send_byte', index=3,
+      number=4, type=3, cpp_type=2, label=2,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -124,7 +124,7 @@ _NETINFO = descriptor.Descriptor(
   is_extendable=False,
   extension_ranges=[],
   serialized_start=91,
-  serialized_end=160,
+  serialized_end=164,
 )
 
 
@@ -143,15 +143,22 @@ _SIMPLEREQUEST = descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='cpu_infos', full_name='SimpleRequest.cpu_infos', index=1,
-      number=2, type=11, cpp_type=10, label=3,
+      name='datetime', full_name='SimpleRequest.datetime', index=1,
+      number=2, type=3, cpp_type=2, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='cpu_infos', full_name='SimpleRequest.cpu_infos', index=2,
+      number=3, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='net_infos', full_name='SimpleRequest.net_infos', index=2,
-      number=3, type=11, cpp_type=10, label=3,
+      name='net_infos', full_name='SimpleRequest.net_infos', index=3,
+      number=4, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -165,8 +172,8 @@ _SIMPLEREQUEST = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=162,
-  serialized_end=254,
+  serialized_start=166,
+  serialized_end=276,
 )
 
 
@@ -200,8 +207,8 @@ _SIMPLERESPONSE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=256,
-  serialized_end=306,
+  serialized_start=278,
+  serialized_end=328,
 )
 
 _SIMPLEREQUEST.fields_by_name['cpu_infos'].message_type = _CPUINFO

@@ -4,6 +4,7 @@ import struct
 import protocodec
 import socket
 import net
+import time
 
 
 MONSIT_SERVER_ADDR = ('127.0.0.1', 30002)
@@ -18,8 +19,10 @@ def collect_machine_info():
         net_info = machine_info.net_infos.add()
         net_info.name = dev_name
         net_info.ip = dev_info.ip
-        net_info.recv_MB = dev_info.recv_MB
-        net_info.send_MB = dev_info.send_MB
+        net_info.recv_byte = dev_info.recv_byte
+        net_info.send_byte = dev_info.send_byte
+
+    machine_info.datetime = int(time.time())
 
     return machine_info
 

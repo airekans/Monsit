@@ -4,7 +4,7 @@ import socket
 import struct
 
 
-_data = namedtuple('data', ['ip', 'recv_MB', 'send_MB'])
+_data = namedtuple('data', ['ip', 'recv_byte', 'send_byte'])
 
 
 def get_ip_address(ifname):
@@ -35,8 +35,8 @@ def get_netdevs():
             if ip_addr:
                 device_data[dev_name] = \
                     _data(ip_addr,
-                          float(line[1].split()[0]) / (1024.0 * 1024.0),
-                          float(line[1].split()[8]) / (1024.0 * 1024.0))
+                          int(line[1].split()[0]),
+                          int(line[1].split()[8]))
 
     return device_data
 
