@@ -32,7 +32,12 @@ def create_host_tables(ip):
         'CREATE TABLE IF NOT EXISTS `%s` ('
         '  `id` int(11) NOT NULL AUTO_INCREMENT,'
         '  `name` varchar(14) NOT NULL,'
-        '  `usage_rate` int(11) NOT NULL,'
+        '  `user_count` int(11) NOT NULL,'
+        '  `nice_count` int(11) NOT NULL,'
+        '  `sys_count` int(11) NOT NULL,'
+        '  `idle_count` int(11) NOT NULL,'
+        '  `iowait_count` int(11) NOT NULL,'
+        '  `total_count` int(11) NOT NULL,'
         '  `datetime` datetime NOT NULL,'
         '  PRIMARY KEY (`id`)'
         ') ENGINE=InnoDB'
@@ -67,13 +72,23 @@ def insert_host_info(host_info):
     cpu_insert_stmt = (
         "INSERT INTO %s SET"
         " name='%s',"
-        " usage_rate=%d,"
+        " user_count=%d,"
+        " nice_count=%d,"
+        " sys_count=%d,"
+        " idle_count=%d,"
+        " iowait_count=%d,"
+        " total_count=%d,"
         " datetime='%s'"
     )
     for cpu_info in host_info.cpu_infos:
         stmt = cpu_insert_stmt % (cpu_tbl_name,
                                   cpu_info.name,
-                                  cpu_info.usage_rate,
+                                  cpu_info.user_count,
+                                  cpu_info.nice_count,
+                                  cpu_info.sys_count,
+                                  cpu_info.idle_count,
+                                  cpu_info.iowait_count,
+                                  cpu_info.total_count,
                                   report_time)
         try:
             _cursor.execute(stmt)

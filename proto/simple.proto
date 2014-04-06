@@ -4,7 +4,12 @@ message MetaInfo {
 
 message CPUInfo {
     required string name = 1;
-    required int32 usage_rate = 2;
+    required int32 user_count = 2;
+    required int32 nice_count = 3;
+    required int32 sys_count = 4;
+    required int32 idle_count = 5;
+    required int32 iowait_count = 6;
+    required int32 total_count = 7;
 }
 
 message NetInfo {

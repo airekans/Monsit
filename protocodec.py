@@ -29,8 +29,8 @@ def parse_message(buf):
     meta_info = simple_pb2.MetaInfo()
     try:
         meta_info.ParseFromString(meta_msg_buf)
-    except simple_pb2.message.DecodeError:
-        print 'parsing msg meta info failed'
+    except simple_pb2.message.DecodeError as err:
+        print 'parsing msg meta info failed: ' + str(err)
         return None
 
     msg_cls = getattr(simple_pb2, meta_info.msg_name)
@@ -39,7 +39,8 @@ def parse_message(buf):
 
     msg = msg_cls()
     try:
-        msg.ParseFromString(buf)
+        msg.ParseFromString(buf[8 + meta_len:8 + meta_len + pb_msg_len])
         return msg
-    except simple_pb2.message.DecodeError:
+    except simple_pb2.message.DecodeError as err:
+        print 'parsing msg failed: ' + str(err)
         return None

@@ -17,10 +17,14 @@ def collect_machine_info():
 
     cpu_stats = cpu.get_cpu_stat()
     for name, stat in cpu_stats.iteritems():
-        if name.startswith('cpu'):
-            cpu_info = machine_info.cpu_infos.add()
-            cpu_info.name = name
-            cpu_info.usage_rate = 90
+        cpu_info = machine_info.cpu_infos.add()
+        cpu_info.name = name
+        cpu_info.user_count = stat['user']
+        cpu_info.nice_count = stat['nice']
+        cpu_info.sys_count = stat['sys']
+        cpu_info.idle_count = stat['idle']
+        cpu_info.iowait_count = stat['iowait']
+        cpu_info.total_count = stat['total']
 
     net_infos = net.get_netdevs()
     for dev_name, dev_info in net_infos.iteritems():
