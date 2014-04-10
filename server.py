@@ -2,6 +2,9 @@ import gevent.server
 import struct
 from proto import simple_pb2
 import protocodec
+from gevent import monkey
+monkey.patch_all()
+
 import db
 
 
@@ -18,11 +21,16 @@ class ProtocolServer(object):
         req_full_name = req.DESCRIPTOR.full_name
         try:
             handler = self.__req_handlers[req_full_name]
-            # TODO: should check exception for the handler
-            return handler(req)
         except KeyError as e:
             print 'Cannot find handler for %s: %s' % (req_full_name, str(e))
             return ProtocolServer._get_error_rsp(1, 'cannot find handler for ' + req_full_name)
+
+        try:
+            rsp = handler(req)
+        except:
+            return ProtocolServer._get_error_rsp(2, 'Exception when handling ' + req_full_name)
+
+        return rsp
 
     @staticmethod
     def _get_error_rsp(return_code, err_msg):
