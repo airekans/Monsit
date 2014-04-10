@@ -11,7 +11,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='simple.proto',
   package='',
-  serialized_pb='\n\x0csimple.proto\"\x1c\n\x08MetaInfo\x12\x10\n\x08msg_name\x18\x01 \x02(\t\"\x91\x01\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nuser_count\x18\x02 \x02(\x05\x12\x12\n\nnice_count\x18\x03 \x02(\x05\x12\x11\n\tsys_count\x18\x04 \x02(\x05\x12\x12\n\nidle_count\x18\x05 \x02(\x05\x12\x14\n\x0ciowait_count\x18\x06 \x02(\x05\x12\x13\n\x0btotal_count\x18\x07 \x02(\x05\"I\n\x07NetInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\n\n\x02ip\x18\x02 \x02(\t\x12\x11\n\trecv_byte\x18\x03 \x02(\x03\x12\x11\n\tsend_byte\x18\x04 \x02(\x03\"n\n\rSimpleRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12\x1b\n\tcpu_infos\x18\x03 \x03(\x0b\x32\x08.CPUInfo\x12\x1b\n\tnet_infos\x18\x04 \x03(\x0b\x32\x08.NetInfo\"2\n\x0eSimpleResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t')
+  serialized_pb='\n\x0csimple.proto\"\x1c\n\x08MetaInfo\x12\x10\n\x08msg_name\x18\x01 \x02(\t\"\x91\x01\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nuser_count\x18\x02 \x02(\x05\x12\x12\n\nnice_count\x18\x03 \x02(\x05\x12\x11\n\tsys_count\x18\x04 \x02(\x05\x12\x12\n\nidle_count\x18\x05 \x02(\x05\x12\x14\n\x0ciowait_count\x18\x06 \x02(\x05\x12\x13\n\x0btotal_count\x18\x07 \x02(\x05\"I\n\x07NetInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\n\n\x02ip\x18\x02 \x02(\t\x12\x11\n\trecv_byte\x18\x03 \x02(\x03\x12\x11\n\tsend_byte\x18\x04 \x02(\x03\"n\n\rSimpleRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12\x1b\n\tcpu_infos\x18\x03 \x03(\x0b\x32\x08.CPUInfo\x12\x1b\n\tnet_infos\x18\x04 \x03(\x0b\x32\x08.NetInfo\"2\n\x0eSimpleResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"4\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t')
 
 
 
@@ -246,6 +246,69 @@ _SIMPLERESPONSE = descriptor.Descriptor(
   serialized_end=431,
 )
 
+
+_REGISTERREQUEST = descriptor.Descriptor(
+  name='RegisterRequest',
+  full_name='RegisterRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    descriptor.FieldDescriptor(
+      name='host_name', full_name='RegisterRequest.host_name', index=0,
+      number=1, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=433,
+  serialized_end=469,
+)
+
+
+_REGISTERRESPONSE = descriptor.Descriptor(
+  name='RegisterResponse',
+  full_name='RegisterResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    descriptor.FieldDescriptor(
+      name='return_code', full_name='RegisterResponse.return_code', index=0,
+      number=1, type=5, cpp_type=1, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='msg', full_name='RegisterResponse.msg', index=1,
+      number=2, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=471,
+  serialized_end=523,
+)
+
 _SIMPLEREQUEST.fields_by_name['cpu_infos'].message_type = _CPUINFO
 _SIMPLEREQUEST.fields_by_name['net_infos'].message_type = _NETINFO
 DESCRIPTOR.message_types_by_name['MetaInfo'] = _METAINFO
@@ -253,6 +316,8 @@ DESCRIPTOR.message_types_by_name['CPUInfo'] = _CPUINFO
 DESCRIPTOR.message_types_by_name['NetInfo'] = _NETINFO
 DESCRIPTOR.message_types_by_name['SimpleRequest'] = _SIMPLEREQUEST
 DESCRIPTOR.message_types_by_name['SimpleResponse'] = _SIMPLERESPONSE
+DESCRIPTOR.message_types_by_name['RegisterRequest'] = _REGISTERREQUEST
+DESCRIPTOR.message_types_by_name['RegisterResponse'] = _REGISTERRESPONSE
 
 class MetaInfo(message.Message):
   __metaclass__ = reflection.GeneratedProtocolMessageType
@@ -283,5 +348,17 @@ class SimpleResponse(message.Message):
   DESCRIPTOR = _SIMPLERESPONSE
   
   # @@protoc_insertion_point(class_scope:SimpleResponse)
+
+class RegisterRequest(message.Message):
+  __metaclass__ = reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _REGISTERREQUEST
+  
+  # @@protoc_insertion_point(class_scope:RegisterRequest)
+
+class RegisterResponse(message.Message):
+  __metaclass__ = reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _REGISTERRESPONSE
+  
+  # @@protoc_insertion_point(class_scope:RegisterResponse)
 
 # @@protoc_insertion_point(module_scope)

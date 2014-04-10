@@ -22,10 +22,59 @@ def init():
         return False
 
     _cursor = _cnx.cursor()
+    create_global_tables()
 
 
 def get_host_table_name(ip, field):
     return field + '_' + ip.replace('.', '_')
+
+
+class TableNames(object):
+    hosts_tbl = 'hosts'
+
+    @staticmethod
+    def get_host_table_name(host_id, field):
+        return '%s_%d' % (field, host_id)
+
+
+def create_global_tables():
+    host_table_stmt = (
+        'CREATE TABLE IF NOT EXISTS `%s` ('
+        '  `id` int(11) NOT NULL AUTO_INCREMENT,'
+        '  `name` varchar(100) NOT NULL,'
+        '  PRIMARY KEY (`id`)'
+        ') ENGINE=InnoDB'
+    ) % TableNames.hosts_tbl
+    _cursor.execute(host_table_stmt)
+    _cursor.commit()
+
+
+def get_all_hosts():
+    host_select_stmt = 'SELECT id, name FROM %s' % TableNames.hosts_tbl
+    _cursor.execute(host_select_stmt)
+    return [host_info for host_info in _cursor]
+
+
+def get_host_info(host_name):
+    host_select_stmt = (
+        "SELECT id, name FROM %s WHERE name='%s'"
+    ) % (TableNames.hosts_tbl, host_name)
+    _cursor.execute(host_select_stmt)
+
+    for host_info in _cursor:
+        return host_info
+
+    return None
+
+
+def insert_new_host(host_name):
+    host_insert_stmt = (
+        "INSERT INTO %s SET"
+        " name='%s'"
+    ) % (TableNames.hosts_tbl, host_name)
+    _cursor.execute(host_insert_stmt)
+    _cursor.commit()
+    return get_host_info(host_name)
 
 
 def create_host_tables(ip):
@@ -56,8 +105,9 @@ def create_host_tables(ip):
         '  PRIMARY KEY (`id`)'
         ') ENGINE=InnoDB'
     ) % get_host_table_name(ip, 'net')
-
     _cursor.execute(net_table_stmt)
+
+    _cursor.commit()
 
 
 def insert_host_info(host_info):

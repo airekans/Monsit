@@ -23,35 +23,57 @@ class ProtocolServer(object):
             handler = self.__req_handlers[req_full_name]
         except KeyError as e:
             print 'Cannot find handler for %s: %s' % (req_full_name, str(e))
-            return ProtocolServer._get_error_rsp(1, 'cannot find handler for ' + req_full_name)
+            return ProtocolServer.get_error_rsp(1, 'cannot find handler for ' + req_full_name)
 
         try:
             rsp = handler(req)
         except:
-            return ProtocolServer._get_error_rsp(2, 'Exception when handling ' + req_full_name)
+            return ProtocolServer.get_error_rsp(2, 'Exception when handling ' + req_full_name)
 
         return rsp
 
     @staticmethod
-    def _get_error_rsp(return_code, err_msg):
+    def get_error_rsp(return_code, err_msg):
         rsp = simple_pb2.SimpleResponse()
         rsp.return_code = return_code
         rsp.msg = err_msg
         return rsp
 
 
-def handle_simple_req(req):
-    print req
+class MonsitServer(object):
 
-    if len(req.net_infos) > 0:
-        db.create_host_tables(req.net_infos[0].ip)
-        if not db.insert_host_info(req):
-            print 'failed to store req in db'
+    def __init__(self):
+        registered_hosts = {}
+        for host in db.get_all_hosts():
+            registered_hosts[host[1]] = (host[0], False)
 
-    rsp = simple_pb2.SimpleResponse()
-    rsp.return_code = 0
-    rsp.msg = 'success'
-    return rsp
+        self.__registered_hosts = registered_hosts
+
+    def handle_register_req(self, req):
+        # if the host is not in DB yet, insert it into db
+        try:
+            host_info = self.__registered_hosts[req.host_name]
+            host_info[1] = True
+        except KeyError:
+            host_info = db.insert_new_host(req.host_name)
+            self.__registered_hosts[req.host_name] = (host_info[0], True)
+
+    def handle_simple_req(self, req):
+        if req.host_name not in self.__registered_hosts:
+            print 'Host not registered:', req.host_name
+            return ProtocolServer.get_error_rsp(3, 'Not registered')
+
+        print req
+
+        if len(req.net_infos) > 0:
+            db.create_host_tables(req.net_infos[0].ip)
+            if not db.insert_host_info(req):
+                print 'failed to store req in db'
+
+        rsp = simple_pb2.SimpleResponse()
+        rsp.return_code = 0
+        rsp.msg = 'success'
+        return rsp
 
 
 def print_binary_string(bin_str):
@@ -61,12 +83,16 @@ def print_binary_string(bin_str):
 
 
 _pb_server = ProtocolServer()
+_monsit_server = MonsitServer()
 
 
 def init_pb_server():
     global _pb_server
 
-    _pb_server.register_handler(simple_pb2.SimpleRequest, handle_simple_req)
+    _pb_server.register_handler(simple_pb2.SimpleRequest,
+                                _monsit_server.handle_simple_req)
+    _pb_server.register_handler(simple_pb2.RegisterRequest,
+                                _monsit_server.handle_register_req)
 
 
 def handle(socket, addr):
