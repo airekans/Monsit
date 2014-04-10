@@ -5,6 +5,33 @@ import protocodec
 import db
 
 
+class ProtocolServer(object):
+
+    def __init__(self):
+        self.__req_handlers = {}
+
+    def register_handler(self, req_cls, handler):
+        # TODO: double check the performance of hashing long stirng
+        self.__req_handlers[req_cls.DESCRIPTOR.full_name] = handler
+
+    def handle_req(self, req):
+        req_full_name = req.DESCRIPTOR.full_name
+        try:
+            handler = self.__req_handlers[req_full_name]
+            # TODO: should check exception for the handler
+            return handler(req)
+        except KeyError as e:
+            print 'Cannot find handler for %s: %s' % (req_full_name, str(e))
+            return ProtocolServer._get_error_rsp(1, 'cannot find handler for ' + req_full_name)
+
+    @staticmethod
+    def _get_error_rsp(return_code, err_msg):
+        rsp = simple_pb2.SimpleResponse()
+        rsp.return_code = return_code
+        rsp.msg = err_msg
+        return rsp
+
+
 def handle_simple_req(req):
     print req
 
@@ -23,6 +50,15 @@ def print_binary_string(bin_str):
     for c in bin_str:
         print ord(c),
     print ''
+
+
+_pb_server = ProtocolServer()
+
+
+def init_pb_server():
+    global _pb_server
+
+    _pb_server.register_handler(simple_pb2.SimpleRequest, handle_simple_req)
 
 
 def handle(socket, addr):
@@ -60,7 +96,7 @@ def handle(socket, addr):
                 print 'pb decode error, skip this message'
                 break
 
-            rsp = handle_simple_req(req)
+            rsp = _pb_server.handle_req(req)
             serialized_rsp = protocodec.serialize_message(rsp)
             socket.send(serialized_rsp)
 
@@ -71,5 +107,6 @@ def handle(socket, addr):
 
 if __name__ == '__main__':
     db.init()
+    init_pb_server()
     server = gevent.server.StreamServer(('127.0.0.1', 30002), handle)
     server.serve_forever()

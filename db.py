@@ -6,6 +6,7 @@ _MYSQL_USER = 'monsit'
 _MYSQL_PASSWORD = 'monsitpass'
 _MYSQL_DB = 'monsit'
 
+# TODO: change to use connection pool
 _cnx = None
 _cursor = None
 
