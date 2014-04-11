@@ -3,6 +3,8 @@
 from google.protobuf import descriptor
 from google.protobuf import message
 from google.protobuf import reflection
+from google.protobuf import service
+from google.protobuf import service_reflection
 from google.protobuf import descriptor_pb2
 # @@protoc_insertion_point(imports)
 
@@ -11,7 +13,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='simple.proto',
   package='',
-  serialized_pb='\n\x0csimple.proto\"\x1c\n\x08MetaInfo\x12\x10\n\x08msg_name\x18\x01 \x02(\t\"\x91\x01\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nuser_count\x18\x02 \x02(\x05\x12\x12\n\nnice_count\x18\x03 \x02(\x05\x12\x11\n\tsys_count\x18\x04 \x02(\x05\x12\x12\n\nidle_count\x18\x05 \x02(\x05\x12\x14\n\x0ciowait_count\x18\x06 \x02(\x05\x12\x13\n\x0btotal_count\x18\x07 \x02(\x05\"I\n\x07NetInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\n\n\x02ip\x18\x02 \x02(\t\x12\x11\n\trecv_byte\x18\x03 \x02(\x03\x12\x11\n\tsend_byte\x18\x04 \x02(\x03\"n\n\rSimpleRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12\x1b\n\tcpu_infos\x18\x03 \x03(\x0b\x32\x08.CPUInfo\x12\x1b\n\tnet_infos\x18\x04 \x03(\x0b\x32\x08.NetInfo\"2\n\x0eSimpleResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"4\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t')
+  serialized_pb='\n\x0csimple.proto\"\x1c\n\x08MetaInfo\x12\x10\n\x08msg_name\x18\x01 \x02(\t\"\x91\x01\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nuser_count\x18\x02 \x02(\x05\x12\x12\n\nnice_count\x18\x03 \x02(\x05\x12\x11\n\tsys_count\x18\x04 \x02(\x05\x12\x12\n\nidle_count\x18\x05 \x02(\x05\x12\x14\n\x0ciowait_count\x18\x06 \x02(\x05\x12\x13\n\x0btotal_count\x18\x07 \x02(\x05\"I\n\x07NetInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\n\n\x02ip\x18\x02 \x02(\t\x12\x11\n\trecv_byte\x18\x03 \x02(\x03\x12\x11\n\tsend_byte\x18\x04 \x02(\x03\"n\n\rSimpleRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12\x1b\n\tcpu_infos\x18\x03 \x03(\x0b\x32\x08.CPUInfo\x12\x1b\n\tnet_infos\x18\x04 \x03(\x0b\x32\x08.NetInfo\"2\n\x0eSimpleResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"4\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t2k\n\rMonsitService\x12/\n\x08Register\x12\x10.RegisterRequest\x1a\x11.RegisterResponse\x12)\n\x06Report\x12\x0e.SimpleRequest\x1a\x0f.SimpleResponseB\x03\x90\x01\x01')
 
 
 
@@ -360,5 +362,42 @@ class RegisterResponse(message.Message):
   DESCRIPTOR = _REGISTERRESPONSE
   
   # @@protoc_insertion_point(class_scope:RegisterResponse)
+
+
+_MONSITSERVICE = descriptor.ServiceDescriptor(
+  name='MonsitService',
+  full_name='MonsitService',
+  file=DESCRIPTOR,
+  index=0,
+  options=None,
+  serialized_start=525,
+  serialized_end=632,
+  methods=[
+  descriptor.MethodDescriptor(
+    name='Register',
+    full_name='MonsitService.Register',
+    index=0,
+    containing_service=None,
+    input_type=_REGISTERREQUEST,
+    output_type=_REGISTERRESPONSE,
+    options=None,
+  ),
+  descriptor.MethodDescriptor(
+    name='Report',
+    full_name='MonsitService.Report',
+    index=1,
+    containing_service=None,
+    input_type=_SIMPLEREQUEST,
+    output_type=_SIMPLERESPONSE,
+    options=None,
+  ),
+])
+
+class MonsitService(service.Service):
+  __metaclass__ = service_reflection.GeneratedServiceType
+  DESCRIPTOR = _MONSITSERVICE
+class MonsitService_Stub(MonsitService):
+  __metaclass__ = service_reflection.GeneratedServiceStubType
+  DESCRIPTOR = _MONSITSERVICE
 
 # @@protoc_insertion_point(module_scope)

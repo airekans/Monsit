@@ -46,7 +46,7 @@ def create_global_tables():
         ') ENGINE=InnoDB'
     ) % TableNames.hosts_tbl
     _cursor.execute(host_table_stmt)
-    _cursor.commit()
+    _cnx.commit()
 
 
 def get_all_hosts():
@@ -73,7 +73,7 @@ def insert_new_host(host_name):
         " name='%s'"
     ) % (TableNames.hosts_tbl, host_name)
     _cursor.execute(host_insert_stmt)
-    _cursor.commit()
+    _cnx.commit()
     return get_host_info(host_name)
 
 
@@ -107,7 +107,7 @@ def create_host_tables(ip):
     ) % get_host_table_name(ip, 'net')
     _cursor.execute(net_table_stmt)
 
-    _cursor.commit()
+    _cnx.commit()
 
 
 def insert_host_info(host_info):

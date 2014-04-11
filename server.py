@@ -14,7 +14,7 @@ class ProtocolServer(object):
         self.__req_handlers = {}
 
     def register_handler(self, req_cls, handler):
-        # TODO: double check the performance of hashing long stirng
+        # TODO: double check the performance of hashing long string
         self.__req_handlers[req_cls.DESCRIPTOR.full_name] = handler
 
     def handle_req(self, req):
@@ -28,6 +28,8 @@ class ProtocolServer(object):
         try:
             rsp = handler(req)
         except:
+            import traceback
+            traceback.print_exc()
             return ProtocolServer.get_error_rsp(2, 'Exception when handling ' + req_full_name)
 
         return rsp
@@ -45,7 +47,7 @@ class MonsitServer(object):
     def __init__(self):
         registered_hosts = {}
         for host in db.get_all_hosts():
-            registered_hosts[host[1]] = (host[0], False)
+            registered_hosts[host[1]] = [host[0], False]
 
         self.__registered_hosts = registered_hosts
 
@@ -56,10 +58,13 @@ class MonsitServer(object):
             host_info[1] = True
         except KeyError:
             host_info = db.insert_new_host(req.host_name)
-            self.__registered_hosts[req.host_name] = (host_info[0], True)
+            self.__registered_hosts[req.host_name] = [host_info[0], True]
+
+        return ProtocolServer.get_error_rsp(0, '')
 
     def handle_simple_req(self, req):
-        if req.host_name not in self.__registered_hosts:
+        if req.host_name not in self.__registered_hosts or \
+           not self.__registered_hosts[req.host_name][1]:
             print 'Host not registered:', req.host_name
             return ProtocolServer.get_error_rsp(3, 'Not registered')
 
@@ -83,11 +88,13 @@ def print_binary_string(bin_str):
 
 
 _pb_server = ProtocolServer()
-_monsit_server = MonsitServer()
+_monsit_server = None
 
 
 def init_pb_server():
-    global _pb_server
+    global _pb_server, _monsit_server
+
+    _monsit_server = MonsitServer()
 
     _pb_server.register_handler(simple_pb2.SimpleRequest,
                                 _monsit_server.handle_simple_req)
