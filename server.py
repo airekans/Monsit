@@ -153,5 +153,5 @@ def handle(socket, addr):
 if __name__ == '__main__':
     db.init()
     init_pb_server()
-    server = gevent.server.StreamServer(('127.0.0.1', 30002), handle)
+    server = gevent.server.StreamServer(('0.0.0.0', 30002), handle)
     server.serve_forever()
