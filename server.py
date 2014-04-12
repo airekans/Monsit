@@ -154,4 +154,7 @@ if __name__ == '__main__':
     db.init()
     init_pb_server()
     server = gevent.server.StreamServer(('0.0.0.0', 30002), handle)
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print 'monsit got SIGINT, exit.'

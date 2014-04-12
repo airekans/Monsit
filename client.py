@@ -6,9 +6,7 @@ import socket
 import net
 import time
 import cpu
-
-
-MONSIT_SERVER_ADDR = ('127.0.0.1', 30002)
+import optparse
 
 
 def get_register_info():
@@ -63,8 +61,18 @@ def print_binary_string(bin_str):
 
 
 if __name__ == '__main__':
+    optparser = optparse.OptionParser(usage = "%prog [options]")
+    optparser.add_option('--master-ip', dest="master_ip",
+                         help="IP of the master", default="127.0.0.1")
+    optparser.add_option('--master-port', dest="master_port",
+                         help="Port of the master", type="int",
+                         default=30002)
+
+    opts, args = optparser.parse_args()
+    master_addr = (opts.master_ip, opts.master_port)
+
     sock = gevent.socket.socket()
-    sock.connect(MONSIT_SERVER_ADDR)
+    sock.connect(master_addr)
 
     # first register to the master
     is_registered = False
