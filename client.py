@@ -95,6 +95,8 @@ if __name__ == '__main__':
                 is_registered = True
             else:
                 break
+        else:
+            handle_response(rsp)
 
         gevent.sleep(5)
 

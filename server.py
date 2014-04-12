@@ -45,11 +45,12 @@ class ProtocolServer(object):
 class MonsitServer(object):
 
     def __init__(self):
-        registered_hosts = {}
-        for host in db.get_all_hosts():
-            registered_hosts[host[1]] = [host[0], False]
+        with db.DBConnection() as cnx:
+            registered_hosts = {}
+            for host in cnx.get_all_hosts():
+                registered_hosts[host[1]] = [host[0], False]
 
-        self.__registered_hosts = registered_hosts
+            self.__registered_hosts = registered_hosts
 
     def handle_register_req(self, req):
         # if the host is not in DB yet, insert it into db
@@ -57,8 +58,9 @@ class MonsitServer(object):
             host_info = self.__registered_hosts[req.host_name]
             host_info[1] = True
         except KeyError:
-            host_info = db.insert_new_host(req.host_name)
-            self.__registered_hosts[req.host_name] = [host_info[0], True]
+            with db.DBConnection() as cnx:
+                host_info = cnx.insert_new_host(req.host_name)
+                self.__registered_hosts[req.host_name] = [host_info[0], True]
 
         return ProtocolServer.get_error_rsp(0, '')
 
@@ -71,9 +73,11 @@ class MonsitServer(object):
         print req
 
         if len(req.net_infos) > 0:
-            db.create_host_tables(req.net_infos[0].ip)
-            if not db.insert_host_info(req):
-                print 'failed to store req in db'
+            with db.DBConnection() as cnx:
+                host_id = self.__registered_hosts[req.host_name][0]
+                cnx.create_host_tables(host_id)
+                if not cnx.insert_host_info(req, host_id):
+                    print 'failed to store req in db'
 
         rsp = simple_pb2.SimpleResponse()
         rsp.return_code = 0
