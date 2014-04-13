@@ -52,8 +52,6 @@ def handle_response(rsp):
         return True
 
 
-
-
 def print_binary_string(bin_str):
     for c in bin_str:
         print ord(c),
