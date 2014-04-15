@@ -8,6 +8,8 @@ _DB_CONFIG = {'host': '127.0.0.1',
               'database': 'monsit'}
 _POOL_SIZE = mysql.connector.pooling.CNX_POOL_MAXSIZE
 
+_VALID_FIELDS = ['cpu', 'net']
+
 
 class TableNames(object):
     hosts_tbl = 'hosts'
@@ -196,4 +198,16 @@ class DBConnection(object):
         self.__cnx.commit()
         return True
 
+    def get_host_stats(self, host_id, fields):
+        cursor = self.__cnx.cursor()
+        stmt_template = 'SELECT * FROM %s LIMIT 100'
+        stats = {}
+        for field in fields:
+            if field in _VALID_FIELDS:
+                select_stmt = stmt_template % self.get_host_table_name(host_id, field)
+                cursor.execute(select_stmt)
+                stats[field] = [stat for stat in cursor]
+
+        print stats
+        return stats
 

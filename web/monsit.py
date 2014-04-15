@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, abort, jsonify
 import db
 
 app = Flask(__name__)
@@ -18,8 +18,33 @@ def index():
 
 @app.route('/hostinfo', methods=['GET'])
 def hostinfo():
-    host_id = request.args.get('id', 'None')
-    return render_template('hostinfo.html', host_id=host_id)
+    try:
+        host_id = int(request.args['id'])
+        host_name = request.args['name']
+    except (KeyError, ValueError):
+        abort(404)
+
+    return render_template('hostinfo.html', host_id=host_id, host_name=host_name)
+
+@app.route('/_get_hostinfo', methods=['GET'])
+def ajax_hostinfo():
+    field_type = request.args.get('type', 'cpu')
+    host_id = request.args.get('id', 0, type=int)
+    host_stats = {}
+    with db.DBConnection() as cnx:
+        db_host_stats = cnx.get_host_stats(host_id, [field_type])
+        for field, db_stats in db_host_stats.iteritems():
+            if field == 'cpu':
+                host_stats['cpu'] = {}
+                cpu_stat = host_stats['cpu']
+                for cpu_stats in db_stats:
+                    cpu_name = cpu_stats[1]
+                    if cpu_name not in cpu_stat:
+                        cpu_stat[cpu_name] = {}
+                    stat_time = cpu_stats[8].strftime('%Y-%m-%d %H:%M:%S')
+                    cpu_stat[cpu_name][stat_time] = sum(cpu_stats[2:5]) * 100 / cpu_stats[7]
+
+    return jsonify(stats=host_stats)
 
 
 if __name__ == "__main__":
