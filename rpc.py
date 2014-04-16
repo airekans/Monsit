@@ -7,7 +7,21 @@ from proto import simple_pb2
 
 
 class RpcController(google.protobuf.service.RpcController):
-    pass
+    def __init__(self):
+        self.error = None
+
+    def Reset(self):
+        self.error = None
+
+    def Failed(self):
+        return self.error is not None
+
+    def ErrorText(self):
+        return self.error
+
+    def SetFailed(self, reason):
+        self.error = reason
+
 
 class TcpChannel(google.protobuf.service.RpcChannel):
     def __init__(self, addr):
@@ -20,18 +34,20 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         self._socket.connect(self._addr)
 
     def CallMethod(self, method_descriptor, rpc_controller,
-                 request, response_class, done):
+                   request, response_class, done):
         service_descriptor = method_descriptor.containing_service
         meta_info = simple_pb2.MetaInfo()
         meta_info.service_name = service_descriptor.full_name
         meta_info.method_name = method_descriptor.name
-        print 'method name:', method_descriptor.name
         serialized_req = protocodec.serialize_rpc_message(meta_info, request)
         self._socket.send(serialized_req)
 
         pb_buf = self._socket.recv(2 + struct.calcsize("!I"))
-        # TODO: check 'PB'
-        buf_size = struct.unpack( "!I", pb_buf[2:])[0]
+        if pb_buf[:2] != 'PB':
+            print 'buffer not begin with PB'
+            return None
+
+        buf_size = struct.unpack("!I", pb_buf[2:])[0]
         pb_buf = self._socket.recv(buf_size)
         result = protocodec.parse_message(pb_buf)
         if result is None:
@@ -43,7 +59,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
            meta_info.method_name != method_descriptor.name:
             print 'rsp meta not match'
             return None
-        elif rsp.DESCRIPTOR != response_class.DESCRIPTOR:
+        elif not isinstance(rsp, response_class):
             print 'rsp class not match'
             return None
 
@@ -52,7 +68,6 @@ class TcpChannel(google.protobuf.service.RpcChannel):
             return None
         else:
             return rsp
-
 
 
 class RpcServer(object):

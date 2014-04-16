@@ -1,10 +1,5 @@
 option py_generic_services = true;
 
-message MetaInfo {
-    required string service_name = 1;
-    required string method_name = 2;
-    required string msg_name = 3;
-}
 
 message CPUInfo {
     required string name = 1;

@@ -136,10 +136,11 @@ def handle(socket, addr):
 
             pb_buf = mem_content[cur_index + 6: cur_index + 6 + buf_size].tobytes()
             cur_index += buf_size + 6
-            req = protocodec.parse_message(pb_buf)
-            if req is None:
+            result = protocodec.parse_message(pb_buf)
+            if result is None:
                 print 'pb decode error, skip this message'
                 break
+            _, req = result
 
             rsp = _pb_server.handle_req(req)
             serialized_rsp = protocodec.serialize_message(rsp)
