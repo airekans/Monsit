@@ -17,6 +17,20 @@ def serialize_message(msg):
     return msg_buf
 
 
+def serialize_rpc_message(meta_info, msg):
+    meta_info.msg_name = msg.DESCRIPTOR.full_name
+
+    meta_buf = meta_info.SerializeToString()
+    msg_buf = msg.SerializeToString()
+    meta_buf_len = len(meta_buf)
+    msg_buf_len = len(msg_buf)
+
+    pb_buf_len = struct.pack('!III', meta_buf_len + msg_buf_len + 8,
+                             meta_buf_len, msg_buf_len)
+    msg_buf = 'PB' + pb_buf_len + meta_buf + msg_buf
+    return msg_buf
+
+
 def parse_message(buf):
     if len(buf) < 8:
         return None
@@ -40,7 +54,7 @@ def parse_message(buf):
     msg = msg_cls()
     try:
         msg.ParseFromString(buf[8 + meta_len:8 + meta_len + pb_msg_len])
-        return msg
+        return meta_info, msg
     except simple_pb2.message.DecodeError as err:
         print 'parsing msg failed: ' + str(err)
         return None

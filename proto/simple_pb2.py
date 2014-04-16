@@ -13,7 +13,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='simple.proto',
   package='',
-  serialized_pb='\n\x0csimple.proto\"\x1c\n\x08MetaInfo\x12\x10\n\x08msg_name\x18\x01 \x02(\t\"\x91\x01\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nuser_count\x18\x02 \x02(\x05\x12\x12\n\nnice_count\x18\x03 \x02(\x05\x12\x11\n\tsys_count\x18\x04 \x02(\x05\x12\x12\n\nidle_count\x18\x05 \x02(\x05\x12\x14\n\x0ciowait_count\x18\x06 \x02(\x05\x12\x13\n\x0btotal_count\x18\x07 \x02(\x05\"I\n\x07NetInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\n\n\x02ip\x18\x02 \x02(\t\x12\x11\n\trecv_byte\x18\x03 \x02(\x03\x12\x11\n\tsend_byte\x18\x04 \x02(\x03\"n\n\rSimpleRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12\x1b\n\tcpu_infos\x18\x03 \x03(\x0b\x32\x08.CPUInfo\x12\x1b\n\tnet_infos\x18\x04 \x03(\x0b\x32\x08.NetInfo\"2\n\x0eSimpleResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"4\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t2k\n\rMonsitService\x12/\n\x08Register\x12\x10.RegisterRequest\x1a\x11.RegisterResponse\x12)\n\x06Report\x12\x0e.SimpleRequest\x1a\x0f.SimpleResponseB\x03\x90\x01\x01')
+  serialized_pb='\n\x0csimple.proto\"G\n\x08MetaInfo\x12\x14\n\x0cservice_name\x18\x01 \x02(\t\x12\x13\n\x0bmethod_name\x18\x02 \x02(\t\x12\x10\n\x08msg_name\x18\x03 \x02(\t\"\x91\x01\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nuser_count\x18\x02 \x02(\x05\x12\x12\n\nnice_count\x18\x03 \x02(\x05\x12\x11\n\tsys_count\x18\x04 \x02(\x05\x12\x12\n\nidle_count\x18\x05 \x02(\x05\x12\x14\n\x0ciowait_count\x18\x06 \x02(\x05\x12\x13\n\x0btotal_count\x18\x07 \x02(\x05\"I\n\x07NetInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\n\n\x02ip\x18\x02 \x02(\t\x12\x11\n\trecv_byte\x18\x03 \x02(\x03\x12\x11\n\tsend_byte\x18\x04 \x02(\x03\"n\n\rSimpleRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12\x1b\n\tcpu_infos\x18\x03 \x03(\x0b\x32\x08.CPUInfo\x12\x1b\n\tnet_infos\x18\x04 \x03(\x0b\x32\x08.NetInfo\"2\n\x0eSimpleResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"4\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t2k\n\rMonsitService\x12/\n\x08Register\x12\x10.RegisterRequest\x1a\x11.RegisterResponse\x12)\n\x06Report\x12\x0e.SimpleRequest\x1a\x0f.SimpleResponseB\x03\x90\x01\x01')
 
 
 
@@ -26,8 +26,22 @@ _METAINFO = descriptor.Descriptor(
   containing_type=None,
   fields=[
     descriptor.FieldDescriptor(
-      name='msg_name', full_name='MetaInfo.msg_name', index=0,
+      name='service_name', full_name='MetaInfo.service_name', index=0,
       number=1, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='method_name', full_name='MetaInfo.method_name', index=1,
+      number=2, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='msg_name', full_name='MetaInfo.msg_name', index=2,
+      number=3, type=9, cpp_type=9, label=2,
       has_default_value=False, default_value=unicode("", "utf-8"),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -42,7 +56,7 @@ _METAINFO = descriptor.Descriptor(
   is_extendable=False,
   extension_ranges=[],
   serialized_start=16,
-  serialized_end=44,
+  serialized_end=87,
 )
 
 
@@ -111,8 +125,8 @@ _CPUINFO = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=47,
-  serialized_end=192,
+  serialized_start=90,
+  serialized_end=235,
 )
 
 
@@ -160,8 +174,8 @@ _NETINFO = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=194,
-  serialized_end=267,
+  serialized_start=237,
+  serialized_end=310,
 )
 
 
@@ -209,8 +223,8 @@ _SIMPLEREQUEST = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=269,
-  serialized_end=379,
+  serialized_start=312,
+  serialized_end=422,
 )
 
 
@@ -244,8 +258,8 @@ _SIMPLERESPONSE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=381,
-  serialized_end=431,
+  serialized_start=424,
+  serialized_end=474,
 )
 
 
@@ -272,8 +286,8 @@ _REGISTERREQUEST = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=433,
-  serialized_end=469,
+  serialized_start=476,
+  serialized_end=512,
 )
 
 
@@ -307,8 +321,8 @@ _REGISTERRESPONSE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=471,
-  serialized_end=523,
+  serialized_start=514,
+  serialized_end=566,
 )
 
 _SIMPLEREQUEST.fields_by_name['cpu_infos'].message_type = _CPUINFO
@@ -370,8 +384,8 @@ _MONSITSERVICE = descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=525,
-  serialized_end=632,
+  serialized_start=568,
+  serialized_end=675,
   methods=[
   descriptor.MethodDescriptor(
     name='Register',
