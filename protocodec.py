@@ -17,8 +17,7 @@ def serialize_message(msg):
     return msg_buf
 
 
-def serialize_rpc_message(msg):
-    meta_info = simple_pb2.MetaInfo()
+def serialize_rpc_message(meta_info, msg):
     meta_info.msg_name = msg.DESCRIPTOR.full_name
 
     meta_buf = meta_info.SerializeToString()
