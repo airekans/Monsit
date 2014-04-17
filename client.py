@@ -43,29 +43,7 @@ def collect_machine_info():
     return machine_info
 
 
-def handle_response(rsp):
-    print 'retcode', rsp.return_code, 'msg', rsp.msg
-
-    if isinstance(rsp, simple_pb2.RegisterResponse):
-        return rsp.return_code == 0
-    else:
-        return True
-
-
-def print_binary_string(bin_str):
-    for c in bin_str:
-        print ord(c),
-    print ''
-
-
-if __name__ == '__main__':
-    optparser = optparse.OptionParser(usage = "%prog [options]")
-    optparser.add_option('--master-ip', dest="master_ip",
-                         help="IP of the master", default="127.0.0.1")
-    optparser.add_option('--master-port', dest="master_port",
-                         help="Port of the master", type="int",
-                         default=30002)
-
+def collect_thread(master_addr, interval):
     opts, args = optparser.parse_args()
     master_addr = (opts.master_ip, opts.master_port)
 
@@ -85,5 +63,23 @@ if __name__ == '__main__':
         controller = rpc.RpcController()
         rsp = stub.Report(controller, req)
         print rsp
-        gevent.sleep(5)
+        gevent.sleep(interval)
 
+
+if __name__ == '__main__':
+    optparser = optparse.OptionParser(usage = "%prog [options]")
+    optparser.add_option('--master-ip', dest="master_ip",
+                         help="IP of the master", default="127.0.0.1")
+    optparser.add_option('--master-port', dest="master_port",
+                         help="Port of the master", type="int",
+                         default=30002)
+
+    opts, args = optparser.parse_args()
+    master_addr = (opts.master_ip, opts.master_port)
+
+    job = gevent.spawn(lambda : collect_thread(master_addr, 5))
+
+    try:
+        job.join()
+    except KeyboardInterrupt:
+        print 'monsit agent got SIGINT, exit.'
