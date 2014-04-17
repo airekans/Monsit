@@ -7,6 +7,8 @@ import net
 import time
 import cpu
 import optparse
+import rpc
+import sys
 
 
 def get_register_info():
@@ -69,43 +71,21 @@ if __name__ == '__main__':
     opts, args = optparser.parse_args()
     master_addr = (opts.master_ip, opts.master_port)
 
-    sock = gevent.socket.socket()
-    sock.connect(master_addr)
+    tcp_channel = rpc.TcpChannel(master_addr)
+    stub = simple_pb2.MonsitService_Stub(tcp_channel)
 
     # first register to the master
-    is_registered = False
+    req = get_register_info()
+    controller = rpc.RpcController()
+    rsp = stub.Register(controller, req)
+    if rsp.return_code != 0:
+        print 'Failed to register to master: ', rsp.msg
+        sys.exit(1)
 
     while True:
-        if not is_registered:
-            req = get_register_info()
-        else:
-            req = collect_machine_info()
-
-        req_buf = protocodec.serialize_message(req)
-
-        sock.send(req_buf)
-        rsp_buf = sock.recv(1024)
-        while len(rsp_buf) < 6:
-            rsp_buf += sock.recv(1024)
-
-        if rsp_buf[:2] != 'PB':
-            continue
-
-        (rsp_len,) = struct.unpack('!I', rsp_buf[2:6])
-        while len(rsp_buf) < 6 + rsp_len:
-            rsp_buf += sock.recv(1024)
-
-        rsp = protocodec.parse_message(rsp_buf[6:6 + rsp_len])
-        if not is_registered:
-            if handle_response(rsp):
-                is_registered = True
-            else:
-                break
-        else:
-            handle_response(rsp)
-
+        req = collect_machine_info()
+        controller = rpc.RpcController()
+        rsp = stub.Report(controller, req)
+        print rsp
         gevent.sleep(5)
-
-
-
 

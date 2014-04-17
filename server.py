@@ -2,6 +2,7 @@ import gevent.server
 import struct
 from proto import simple_pb2
 import protocodec
+import rpc
 from gevent import monkey
 monkey.patch_all()
 
@@ -85,6 +86,22 @@ class MonsitServer(object):
         return rsp
 
 
+class MonsitServiceImpl(simple_pb2.MonsitService):
+    def Register(self, rpc_controller, request, done):
+        print 'Register got called'
+        rsp = simple_pb2.RegisterResponse()
+        rsp.return_code = 0
+        rsp.msg = 'SUCCESS'
+        return rsp
+
+    def Report(self, rpc_controller, request, done):
+        print 'Report got called'
+        rsp = simple_pb2.SimpleResponse()
+        rsp.return_code = 0
+        rsp.msg = 'SUCCESS'
+        return rsp
+
+
 def print_binary_string(bin_str):
     for c in bin_str:
         print ord(c),
@@ -153,9 +170,11 @@ def handle(socket, addr):
 
 if __name__ == '__main__':
     db.init()
-    init_pb_server()
-    server = gevent.server.StreamServer(('0.0.0.0', 30002), handle)
+
+    service = MonsitServiceImpl()
+    rpc_server = rpc.RpcServer(('0.0.0.0', 30002))
+    rpc_server.register_service(service)
     try:
-        server.serve_forever()
+        rpc_server.run()
     except KeyboardInterrupt:
         print 'monsit got SIGINT, exit.'
