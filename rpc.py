@@ -3,7 +3,8 @@ import gevent.socket
 import protocodec
 import struct
 import google.protobuf.service
-from proto import simple_pb2
+from google.protobuf import message
+from proto import rpc_meta_pb2
 
 
 class RpcController(google.protobuf.service.RpcController):
@@ -23,6 +24,48 @@ class RpcController(google.protobuf.service.RpcController):
         self.error = reason
 
 
+def serialize_rpc_message(meta_info, msg):
+    meta_info.msg_name = msg.DESCRIPTOR.full_name
+
+    meta_buf = meta_info.SerializeToString()
+    msg_buf = msg.SerializeToString()
+    meta_buf_len = len(meta_buf)
+    msg_buf_len = len(msg_buf)
+
+    pb_buf_len = struct.pack('!III', meta_buf_len + msg_buf_len + 8,
+                             meta_buf_len, msg_buf_len)
+    msg_buf = 'PB' + pb_buf_len + meta_buf + msg_buf
+    return msg_buf
+
+
+def parse_meta(buf):
+    if len(buf) < 8:
+        return None
+
+    (meta_len, pb_msg_len) = struct.unpack('!II', buf[:8])
+    if len(buf) < 8 + meta_len + pb_msg_len:
+        return None
+
+    meta_msg_buf = buf[8:8 + meta_len]
+    meta_info = rpc_meta_pb2.MetaInfo()
+    try:
+        meta_info.ParseFromString(meta_msg_buf)
+        return meta_len, pb_msg_len, meta_info
+    except message.DecodeError as err:
+        print 'parsing msg meta info failed: ' + str(err)
+        return None
+
+
+def parse_msg(buf, msg_cls):
+    msg = msg_cls()
+    try:
+        msg.ParseFromString(buf)
+        return msg
+    except message.DecodeError as err:
+        print 'parsing msg failed: ' + str(err)
+        return None
+
+
 class TcpChannel(google.protobuf.service.RpcChannel):
     def __init__(self, addr):
         google.protobuf.service.RpcChannel.__init__(self)
@@ -36,7 +79,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
     def CallMethod(self, method_descriptor, rpc_controller,
                    request, response_class, done):
         service_descriptor = method_descriptor.containing_service
-        meta_info = simple_pb2.MetaInfo()
+        meta_info = rpc_meta_pb2.MetaInfo()
         meta_info.service_name = service_descriptor.full_name
         meta_info.method_name = method_descriptor.name
         serialized_req = protocodec.serialize_rpc_message(meta_info, request)
@@ -49,18 +92,21 @@ class TcpChannel(google.protobuf.service.RpcChannel):
 
         buf_size = struct.unpack("!I", pb_buf[2:])[0]
         pb_buf = self._socket.recv(buf_size)
-        result = protocodec.parse_message(pb_buf)
+        result = parse_meta(pb_buf)
         if result is None:
             print 'pb decode error, skip this message'
             return None
 
-        meta_info, rsp = result
+        meta_len, pb_msg_len, meta_info = result
         if meta_info.service_name != service_descriptor.full_name or \
-           meta_info.method_name != method_descriptor.name:
+           meta_info.method_name != method_descriptor.name or \
+           meta_info.msg_name != response_class.DESCRIPTOR.full_name:
             print 'rsp meta not match'
             return None
-        elif not isinstance(rsp, response_class):
-            print 'rsp class not match'
+
+        rsp = parse_msg(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
+                        response_class)
+        if rsp is None:
             return None
 
         if done is not None:
@@ -104,33 +150,46 @@ class RpcServer(object):
 
                 pb_buf = mem_content[cur_index + 6: cur_index + 6 + buf_size].tobytes()
                 cur_index += buf_size + 6
-                result = protocodec.parse_message(pb_buf)
+                result = self.parse_message(pb_buf)
                 if result is None:
                     print 'pb decode error, skip this message'
                     break
-                meta_info, req = result
 
-                # try to find the service
-                try:
-                    service = self._services[meta_info.service_name]
-                except KeyError:
-                    print 'cannot find the service', meta_info.service_name
-                    break
-
-                method = service.GetDescriptor().FindMethodByName(meta_info.method_name)
-                if method is None:
-                    print 'cannot find the method', meta_info.method_name
-                    break
-
+                meta_info, service, method, req = result
                 controller = RpcController()
                 rsp = service.CallMethod(method, controller, req, None)
-                serialized_rsp = protocodec.serialize_rpc_message(meta_info, rsp)
+                serialized_rsp = serialize_rpc_message(meta_info, rsp)
                 socket.send(serialized_rsp)
 
             if cur_index > 0:
                 content = content[cur_index:]
 
         print addr, 'has disconnected'
+
+    def parse_message(self, buf):
+        result = parse_meta(buf)
+        if result is None:
+            return None
+        meta_len, pb_msg_len, meta_info = result
+
+        # try to find the service
+        try:
+            service = self._services[meta_info.service_name]
+        except KeyError:
+            print 'cannot find the service', meta_info.service_name
+            return None
+
+        method = service.GetDescriptor().FindMethodByName(meta_info.method_name)
+        if method is None:
+            print 'cannot find the method', meta_info.method_name
+            return None
+
+        msg = parse_msg(buf[8 + meta_len:8 + meta_len + pb_msg_len],
+                        service.GetRequestClass(method))
+        if msg is None:
+            return None
+        else:
+            return meta_info, service, method, msg
 
     def register_service(self, service):
         self._services[service.GetDescriptor().full_name] = service
