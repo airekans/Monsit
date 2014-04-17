@@ -1,7 +1,5 @@
 import gevent
 from proto import simple_pb2
-import struct
-import protocodec
 import socket
 import net
 import time

@@ -1,6 +1,5 @@
 import gevent.server
 import gevent.socket
-import protocodec
 import struct
 import google.protobuf.service
 from google.protobuf import message
@@ -24,7 +23,7 @@ class RpcController(google.protobuf.service.RpcController):
         self.error = reason
 
 
-def serialize_rpc_message(meta_info, msg):
+def _serialize_message(meta_info, msg):
     meta_info.msg_name = msg.DESCRIPTOR.full_name
 
     meta_buf = meta_info.SerializeToString()
@@ -56,7 +55,7 @@ def parse_meta(buf):
         return None
 
 
-def parse_msg(buf, msg_cls):
+def _parse_message(buf, msg_cls):
     msg = msg_cls()
     try:
         msg.ParseFromString(buf)
@@ -82,7 +81,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         meta_info = rpc_meta_pb2.MetaInfo()
         meta_info.service_name = service_descriptor.full_name
         meta_info.method_name = method_descriptor.name
-        serialized_req = protocodec.serialize_rpc_message(meta_info, request)
+        serialized_req = _serialize_message(meta_info, request)
         self._socket.send(serialized_req)
 
         pb_buf = self._socket.recv(2 + struct.calcsize("!I"))
@@ -104,7 +103,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
             print 'rsp meta not match'
             return None
 
-        rsp = parse_msg(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
+        rsp = _parse_message(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
                         response_class)
         if rsp is None:
             return None
@@ -158,7 +157,7 @@ class RpcServer(object):
                 meta_info, service, method, req = result
                 controller = RpcController()
                 rsp = service.CallMethod(method, controller, req, None)
-                serialized_rsp = serialize_rpc_message(meta_info, rsp)
+                serialized_rsp = _serialize_message(meta_info, rsp)
                 socket.send(serialized_rsp)
 
             if cur_index > 0:
@@ -184,7 +183,7 @@ class RpcServer(object):
             print 'cannot find the method', meta_info.method_name
             return None
 
-        msg = parse_msg(buf[8 + meta_len:8 + meta_len + pb_msg_len],
+        msg = _parse_message(buf[8 + meta_len:8 + meta_len + pb_msg_len],
                         service.GetRequestClass(method))
         if msg is None:
             return None
