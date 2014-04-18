@@ -1,5 +1,6 @@
 import mysql.connector
 import datetime
+from proto import simple_pb2
 
 
 _DB_CONFIG = {'host': '127.0.0.1',
@@ -205,8 +206,20 @@ class DBConnection(object):
         for field in fields:
             if field in _VALID_FIELDS:
                 select_stmt = stmt_template % self.get_host_table_name(host_id, field)
-                cursor.execute(select_stmt)
-                stats[field] = [stat for stat in cursor]
+                if field == 'cpu':
+                    cursor.execute(select_stmt)
+                    cpu_infos = []
+                    for stat in cursor:
+                        cpu_info = simple_pb2.CPUInfo(name=stat[1],
+                                                      user_count=stat[2],
+                                                      nice_count=stat[3],
+                                                      sys_count=stat[4],
+                                                      idle_count=stat[5],
+                                                      iowait_count=stat[6],
+                                                      total_count=stat[7])
+                        cpu_infos.append((stat[8], cpu_info))
+
+                    stats[field] = cpu_infos
 
         print stats
         return stats

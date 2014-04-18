@@ -26,9 +26,16 @@ def hostinfo():
 
     return render_template('hostinfo.html', host_id=host_id, host_name=host_name)
 
+
+def get_cpu_usage(cpu_info):
+    return ((cpu_info.user_count + cpu_info.nice_count + cpu_info.sys_count) * 100 /
+            cpu_info.total_count)
+
+
 @app.route('/_get_hostinfo', methods=['GET'])
 def ajax_hostinfo():
     field_type = request.args.get('type', 'cpu')
+    print 'hello'
     host_id = request.args.get('id', 0, type=int)
     host_stats = {}
     with db.DBConnection() as cnx:
@@ -37,12 +44,12 @@ def ajax_hostinfo():
             if field == 'cpu':
                 host_stats['cpu'] = {}
                 cpu_stat = host_stats['cpu']
-                for cpu_stats in db_stats:
-                    cpu_name = cpu_stats[1]
+                for date, cpu_info in db_stats:
+                    stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
+                    cpu_name = cpu_info.name
                     if cpu_name not in cpu_stat:
                         cpu_stat[cpu_name] = {}
-                    stat_time = cpu_stats[8].strftime('%Y-%m-%d %H:%M:%S')
-                    cpu_stat[cpu_name][stat_time] = sum(cpu_stats[2:5]) * 100 / cpu_stats[7]
+                    cpu_stat[cpu_name][stat_time] = get_cpu_usage(cpu_info)
 
     return jsonify(stats=host_stats)
 
