@@ -30,225 +30,112 @@ $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 var host_id = {{ host_id }};
 $(function() {
     var chart_types = ['cpu', 'net'];
-    var cpu_chart_dom = document.getElementById('cpu_chart');
-    var cpu_chart = echarts.init(cpu_chart_dom);
+    var chart_data = {
+        cpu_chart: {title: 'CPU', y_axis_unit: '%',
+                    stat_name: 'cpu',
+                    get_stat_func: function(stat) {
+                        return stat;
+                    }},
+        net_recv_chart: {title: 'Recv', y_axis_unit: 'MB',
+                         stat_name: 'net',
+                         get_stat_func: function(stat) {
+                             return stat.recv;
+                         }},
+        net_send_chart: {title: 'Send', y_axis_unit: 'MB',
+                         stat_name: 'net',
+                         get_stat_func: function(stat) {
+                             return stat.send;
+                         }}
+    };
 
-    var net_recv_chart_dom = document.getElementById('net_recv_chart');
-    var net_recv_chart = echarts.init(net_recv_chart_dom);
-
-    var net_send_chart_dom = document.getElementById('net_send_chart');
-    var net_send_chart = echarts.init(net_send_chart_dom);
+    var charts = {};
+    for (var chart_id in chart_data)
+    {
+        var chart_dom = document.getElementById(chart_id);
+        var tmp_chart = echarts.init(chart_dom);
+        tmp_chart.showLoading({text: 'Loading...'});
+        charts[chart_id] = tmp_chart;
+    }
 
     $.getJSON($SCRIPT_ROOT + '/_get_hostinfo', {type: chart_types, id: host_id},
         function(data) {
-            var cpu_stat = data.stats.cpu;
-            var cpu_names = [];
-            for (var name in cpu_stat)
+            for (var chart_id in chart_data)
             {
-                cpu_names.push(name);
-            }
-            var stat_times = [];
-            for (var stat in cpu_stat.cpu)
-            {
-                stat_times.push(stat);
-            }
-
-            var option = {
-                title : {
-                    text: 'CPU'
-                },
-                tooltip : {
-                    trigger: 'axis'
-                },
-                legend: {
-                    data: cpu_names
-                },
-                toolbox: {
-                    show : true,
-                    feature : {
-                        mark : {show: true},
-                        dataView : {show: true, readOnly: false},
-                        magicType : {show: true, type: ['line', 'bar']},
-                    }
-                },
-                calculable : true,
-                xAxis : [
-                    {
-                        type : 'category',
-                        boundaryGap : false,
-                        data : stat_times
-                    }
-                ],
-                yAxis : [
-                    {
-                        type : 'value',
-                        axisLabel : {
-                            formatter: '{value}%'
-                        },
-                        splitArea : {show : true}
-                    }
-                ],
-                series : []
-            };
-
-            for (var name in cpu_stat)
-            {
-                var tmp_stat = cpu_stat[name];
-                var stat_data = [];
-                for (var stats in tmp_stat)
+                var tmp_data = chart_data[chart_id];
+                var stat = data.stats[tmp_data.stat_name];
+                var names = [];
+                for (var name in stat)
                 {
-                    stat_data.push(tmp_stat[stats]);
+                    names.push(name);
+                }
+                var stat_times = [];
+                for (var t in stat[names[0]])
+                {
+                    stat_times.push(t);
                 }
 
-                option.series.push({
-                    name: name,
-                    type: 'line',
-                    data: stat_data,
-                    markPoint : {
-                        data : [
-                            {type : 'max', name: 'max'},
-                            {type : 'min', name: 'min'}
-                        ]
-                    }
-                });
-            }
-            cpu_chart.setOption(option);
+                var option = {
+                    title : {
+                        text: tmp_data.title
+                    },
+                    tooltip : {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: names
+                    },
+                    toolbox: {
+                        show : true,
+                        feature : {
+                            mark : {show: true},
+                            dataView : {show: true, readOnly: false},
+                            magicType : {show: true, type: ['line', 'bar']},
+                        }
+                    },
+                    calculable : true,
+                    xAxis : [
+                        {
+                            type : 'category',
+                            boundaryGap : false,
+                            data : stat_times
+                        }
+                    ],
+                    yAxis : [
+                        {
+                            type : 'value',
+                            axisLabel : {
+                                formatter: '{value} ' + tmp_data.y_axis_unit
+                            },
+                            splitArea : {show : true}
+                        }
+                    ],
+                    series : []
+                };
 
-            var net_stat = data.stats.net;
-            var net_dev_names = [];
-
-            for (var name in net_stat)
-            {
-                net_dev_names.push(name);
-            }
-
-            stat_times = [];
-            for (var stat in net_stat[net_dev_names[0]])
-            {
-                stat_times.push(stat);
-            }
-
-            option = {
-                title : {
-                    text: 'Recv'
-                },
-                tooltip : {
-                    trigger: 'axis'
-                },
-                legend: {
-                    data: net_dev_names
-                },
-                toolbox: {
-                    show : true,
-                    feature : {
-                        mark : {show: true},
-                        dataView : {show: true, readOnly: false},
-                        magicType : {show: true, type: ['line', 'bar']},
-                    }
-                },
-                calculable : true,
-                xAxis : [
-                    {
-                        type : 'category',
-                        boundaryGap : false,
-                        data : stat_times
-                    }
-                ],
-                yAxis : [
-                    {
-                        type : 'value',
-                        axisLabel : {
-                            formatter: '{value} MB'
-                        },
-                        splitArea : {show : true}
-                    }
-                ],
-                series : []
-            };
-
-            for (var name in net_stat)
-            {
-                var tmp_stat = net_stat[name];
-                var stat_data = [];
-                for (var stats in tmp_stat)
+                for (var name in stat)
                 {
-                    stat_data.push(tmp_stat[stats].recv);
-                }
-
-                option.series.push({
-                    name: name,
-                    type: 'line',
-                    data: stat_data,
-                    markPoint : {
-                        data : [
-                            {type : 'max', name: 'max'},
-                            {type : 'min', name: 'min'}
-                        ]
-                    }
-                });
-            }
-            net_recv_chart.setOption(option);
-
-            option = {
-                title : {
-                    text: 'Send'
-                },
-                tooltip : {
-                    trigger: 'axis'
-                },
-                legend: {
-                    data: net_dev_names
-                },
-                toolbox: {
-                    show : true,
-                    feature : {
-                        mark : {show: true},
-                        dataView : {show: true, readOnly: false},
-                        magicType : {show: true, type: ['line', 'bar']},
-                    }
-                },
-                calculable : true,
-                xAxis : [
+                    var tmp_stat = stat[name];
+                    var stat_data = [];
+                    for (var st in tmp_stat)
                     {
-                        type : 'category',
-                        boundaryGap : false,
-                        data : stat_times
+                        stat_data.push(tmp_data.get_stat_func(tmp_stat[st]));
                     }
-                ],
-                yAxis : [
-                    {
-                        type : 'value',
-                        axisLabel : {
-                            formatter: '{value} MB'
-                        },
-                        splitArea : {show : true}
-                    }
-                ],
-                series : []
-            };
 
-            for (var name in net_stat)
-            {
-                var tmp_stat = net_stat[name];
-                var stat_data = [];
-                for (var stats in tmp_stat)
-                {
-                    stat_data.push(tmp_stat[stats].send);
+                    option.series.push({
+                        name: name,
+                        type: 'line',
+                        data: stat_data,
+                        markPoint : {
+                            data : [
+                                {type : 'max', name: 'max'},
+                                {type : 'min', name: 'min'}
+                            ]
+                        }
+                    });
                 }
-
-                option.series.push({
-                    name: name,
-                    type: 'line',
-                    data: stat_data,
-                    markPoint : {
-                        data : [
-                            {type : 'max', name: 'max'},
-                            {type : 'min', name: 'min'}
-                        ]
-                    }
-                });
+                charts[chart_id].hideLoading();
+                charts[chart_id].setOption(option);
             }
-            net_send_chart.setOption(option);
         });
 });
 </script>
