@@ -220,6 +220,22 @@ class DBConnection(object):
                         cpu_infos.append((stat[8], cpu_info))
 
                     stats[field] = cpu_infos
+                elif field == 'net':
+                    cursor.execute(select_stmt)
+                    net_infos = []
+                    try:
+                        for stat in cursor:
+                            net_info = simple_pb2.NetInfo(name=stat[1],
+                                                          ip=stat[2],
+                                                          recv_byte=stat[4],
+                                                          send_byte=stat[5])
+                            net_infos.append((stat[3], net_info))
+                    except:
+                        import traceback
+                        traceback.print_exc()
+                        raise
+
+                    stats[field] = net_infos
 
         print stats
         return stats

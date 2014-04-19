@@ -8,8 +8,17 @@
 <h2 class="sub-header">CPU</h2>
 <div class="row placeholders">
     <div class="col-xs-12 col-sm-12 placeholder">
-      <div id="chart1"></div>
       <div id="cpu_chart" style="height:300px;"></div>
+    </div>
+</div>
+
+<h2 class="sub-header">Network</h2>
+<div class="row placeholders">
+    <div class="col-xs-12 col-sm-12 placeholder">
+      <div id="net_recv_chart" style="height:300px;"></div>
+    </div>
+    <div class="col-xs-12 col-sm-12 placeholder">
+      <div id="net_send_chart" style="height:300px;"></div>
     </div>
 </div>
 {% endblock %}
@@ -20,9 +29,14 @@
 $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 var host_id = {{ host_id }};
 $(function() {
+    var chart_types = ['cpu', 'net'];
     var cpu_chart_dom = document.getElementById('cpu_chart');
     var cpu_chart = echarts.init(cpu_chart_dom);
-    $.getJSON($SCRIPT_ROOT + '/_get_hostinfo', {type: 'cpu', id: host_id},
+
+    var net_recv_chart_dom = document.getElementById('net_recv_chart');
+    var net_recv_chart = echarts.init(net_recv_chart_dom);
+
+    $.getJSON($SCRIPT_ROOT + '/_get_hostinfo', {type: chart_types, id: host_id},
         function(data) {
             var cpu_stat = data.stats.cpu;
             var cpu_names = [];
@@ -35,7 +49,6 @@ $(function() {
             {
                 stat_times.push(stat);
             }
-
 
             var option = {
                 title : {
@@ -97,6 +110,81 @@ $(function() {
                 });
             }
             cpu_chart.setOption(option);
+
+            var net_stat = data.stats.net;
+            var net_dev_names = [];
+
+            for (var name in net_stat)
+            {
+                net_dev_names.push(name);
+            }
+
+            stat_times = [];
+            for (var stat in net_stat[net_dev_names[0]])
+            {
+                stat_times.push(stat);
+            }
+
+            option = {
+                title : {
+                    text: 'Recv'
+                },
+                tooltip : {
+                    trigger: 'axis'
+                },
+                legend: {
+                    data: net_dev_names
+                },
+                toolbox: {
+                    show : true,
+                    feature : {
+                        mark : {show: true},
+                        dataView : {show: true, readOnly: false},
+                        magicType : {show: true, type: ['line', 'bar']},
+                    }
+                },
+                calculable : true,
+                xAxis : [
+                    {
+                        type : 'category',
+                        boundaryGap : false,
+                        data : stat_times
+                    }
+                ],
+                yAxis : [
+                    {
+                        type : 'value',
+                        axisLabel : {
+                            formatter: '{value} MB'
+                        },
+                        splitArea : {show : true}
+                    }
+                ],
+                series : []
+            };
+
+            for (var name in net_stat)
+            {
+                var tmp_stat = net_stat[name];
+                var stat_data = [];
+                for (var stats in tmp_stat)
+                {
+                    stat_data.push(tmp_stat[stats].recv);
+                }
+
+                option.series.push({
+                    name: name,
+                    type: 'line',
+                    data: stat_data,
+                    markPoint : {
+                        data : [
+                            {type : 'max', name: 'max'},
+                            {type : 'min', name: 'min'}
+                        ]
+                    }
+                });
+            }
+            net_recv_chart.setOption(option);
         });
 });
 </script>
