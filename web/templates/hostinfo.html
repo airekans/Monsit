@@ -36,6 +36,9 @@ $(function() {
     var net_recv_chart_dom = document.getElementById('net_recv_chart');
     var net_recv_chart = echarts.init(net_recv_chart_dom);
 
+    var net_send_chart_dom = document.getElementById('net_send_chart');
+    var net_send_chart = echarts.init(net_send_chart_dom);
+
     $.getJSON($SCRIPT_ROOT + '/_get_hostinfo', {type: chart_types, id: host_id},
         function(data) {
             var cpu_stat = data.stats.cpu;
@@ -185,6 +188,67 @@ $(function() {
                 });
             }
             net_recv_chart.setOption(option);
+
+            option = {
+                title : {
+                    text: 'Send'
+                },
+                tooltip : {
+                    trigger: 'axis'
+                },
+                legend: {
+                    data: net_dev_names
+                },
+                toolbox: {
+                    show : true,
+                    feature : {
+                        mark : {show: true},
+                        dataView : {show: true, readOnly: false},
+                        magicType : {show: true, type: ['line', 'bar']},
+                    }
+                },
+                calculable : true,
+                xAxis : [
+                    {
+                        type : 'category',
+                        boundaryGap : false,
+                        data : stat_times
+                    }
+                ],
+                yAxis : [
+                    {
+                        type : 'value',
+                        axisLabel : {
+                            formatter: '{value} MB'
+                        },
+                        splitArea : {show : true}
+                    }
+                ],
+                series : []
+            };
+
+            for (var name in net_stat)
+            {
+                var tmp_stat = net_stat[name];
+                var stat_data = [];
+                for (var stats in tmp_stat)
+                {
+                    stat_data.push(tmp_stat[stats].send);
+                }
+
+                option.series.push({
+                    name: name,
+                    type: 'line',
+                    data: stat_data,
+                    markPoint : {
+                        data : [
+                            {type : 'max', name: 'max'},
+                            {type : 'min', name: 'min'}
+                        ]
+                    }
+                });
+            }
+            net_send_chart.setOption(option);
         });
 });
 </script>
