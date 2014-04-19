@@ -1,9 +1,10 @@
 package rpc;
 
 message MetaInfo {
-    required string service_name = 1;
-    required string method_name = 2;
-    required string msg_name = 3;
+    required int32 flow_id = 1;
+    required string service_name = 2;
+    required string method_name = 3;
+    required string msg_name = 4;
 }
 
 message ErrorResponse {

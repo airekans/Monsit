@@ -11,7 +11,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='rpc_meta.proto',
   package='rpc',
-  serialized_pb='\n\x0erpc_meta.proto\x12\x03rpc\"G\n\x08MetaInfo\x12\x14\n\x0cservice_name\x18\x01 \x02(\t\x12\x13\n\x0bmethod_name\x18\x02 \x02(\t\x12\x10\n\x08msg_name\x18\x03 \x02(\t\"\x1e\n\rErrorResponse\x12\r\n\x05\x65rror\x18\x01 \x02(\t')
+  serialized_pb='\n\x0erpc_meta.proto\x12\x03rpc\"X\n\x08MetaInfo\x12\x0f\n\x07\x66low_id\x18\x01 \x02(\x05\x12\x14\n\x0cservice_name\x18\x02 \x02(\t\x12\x13\n\x0bmethod_name\x18\x03 \x02(\t\x12\x10\n\x08msg_name\x18\x04 \x02(\t\"\x1e\n\rErrorResponse\x12\r\n\x05\x65rror\x18\x01 \x02(\t')
 
 
 
@@ -24,22 +24,29 @@ _METAINFO = descriptor.Descriptor(
   containing_type=None,
   fields=[
     descriptor.FieldDescriptor(
-      name='service_name', full_name='rpc.MetaInfo.service_name', index=0,
-      number=1, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=unicode("", "utf-8"),
+      name='flow_id', full_name='rpc.MetaInfo.flow_id', index=0,
+      number=1, type=5, cpp_type=1, label=2,
+      has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='method_name', full_name='rpc.MetaInfo.method_name', index=1,
+      name='service_name', full_name='rpc.MetaInfo.service_name', index=1,
       number=2, type=9, cpp_type=9, label=2,
       has_default_value=False, default_value=unicode("", "utf-8"),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='msg_name', full_name='rpc.MetaInfo.msg_name', index=2,
+      name='method_name', full_name='rpc.MetaInfo.method_name', index=2,
       number=3, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='msg_name', full_name='rpc.MetaInfo.msg_name', index=3,
+      number=4, type=9, cpp_type=9, label=2,
       has_default_value=False, default_value=unicode("", "utf-8"),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -54,7 +61,7 @@ _METAINFO = descriptor.Descriptor(
   is_extendable=False,
   extension_ranges=[],
   serialized_start=23,
-  serialized_end=94,
+  serialized_end=111,
 )
 
 
@@ -81,8 +88,8 @@ _ERRORRESPONSE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=96,
-  serialized_end=126,
+  serialized_start=113,
+  serialized_end=143,
 )
 
 DESCRIPTOR.message_types_by_name['MetaInfo'] = _METAINFO

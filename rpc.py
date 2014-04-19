@@ -68,9 +68,15 @@ def _parse_message(buf, msg_cls):
 class TcpChannel(google.protobuf.service.RpcChannel):
     def __init__(self, addr):
         google.protobuf.service.RpcChannel.__init__(self)
+        self._flow_id = 0
         self._addr = addr
         self._socket = gevent.socket.socket()
         self.connect()
+
+    def _get_flow_id(self):
+        flow_id = self._flow_id
+        self._flow_id += 1
+        return flow_id
 
     def connect(self):
         self._socket.connect(self._addr)
@@ -78,7 +84,9 @@ class TcpChannel(google.protobuf.service.RpcChannel):
     def CallMethod(self, method_descriptor, rpc_controller,
                    request, response_class, done):
         service_descriptor = method_descriptor.containing_service
+        flow_id = self._get_flow_id()
         meta_info = rpc_meta_pb2.MetaInfo()
+        meta_info.flow_id = flow_id
         meta_info.service_name = service_descriptor.full_name
         meta_info.method_name = method_descriptor.name
         serialized_req = _serialize_message(meta_info, request)
@@ -97,9 +105,12 @@ class TcpChannel(google.protobuf.service.RpcChannel):
             return None
 
         meta_len, pb_msg_len, meta_info = result
-        if meta_info.service_name != service_descriptor.full_name or \
-           meta_info.method_name != method_descriptor.name or \
-           meta_info.msg_name != response_class.DESCRIPTOR.full_name:
+        if meta_info.flow_id != flow_id:
+            print 'rsp flow id not match:', flow_id, meta_info.flow_id
+            return None
+        elif meta_info.service_name != service_descriptor.full_name or \
+             meta_info.method_name != method_descriptor.name or \
+             meta_info.msg_name != response_class.DESCRIPTOR.full_name:
             print 'rsp meta not match'
             return None
 
@@ -184,7 +195,7 @@ class RpcServer(object):
             return None
 
         msg = _parse_message(buf[8 + meta_len:8 + meta_len + pb_msg_len],
-                        service.GetRequestClass(method))
+                             service.GetRequestClass(method))
         if msg is None:
             return None
         else:
