@@ -77,7 +77,7 @@ if __name__ == '__main__':
     opts, args = optparser.parse_args()
     master_addr = (opts.master_ip, opts.master_port)
 
-    job = gevent.spawn(lambda : collect_thread(master_addr, 5))
+    job = gevent.spawn(lambda: collect_thread(master_addr, 30))
 
     try:
         job.join()
