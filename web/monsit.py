@@ -27,9 +27,15 @@ def hostinfo():
     return render_template('hostinfo.html', host_id=host_id, host_name=host_name)
 
 
-def get_cpu_usage(cpu_info):
-    return ((cpu_info.user_count + cpu_info.nice_count + cpu_info.sys_count) * 100 /
-            cpu_info.total_count)
+def get_cpu_usage(cpu_info, last_cpu_info):
+    if last_cpu_info is None:
+        return ((cpu_info.user_count + cpu_info.nice_count + cpu_info.sys_count) * 100 /
+                cpu_info.total_count)
+
+    used_diff = ((cpu_info.user_count + cpu_info.nice_count + cpu_info.sys_count) -
+                 (last_cpu_info.user_count + last_cpu_info.nice_count + last_cpu_info.sys_count))
+    total_diff = cpu_info.total_count - last_cpu_info.total_count
+    return used_diff * 100 / total_diff
 
 
 def get_net_flow_stat(net_info, last_net_info):
@@ -63,12 +69,15 @@ def ajax_hostinfo():
             if field == 'cpu':
                 host_stats['cpu'] = {}
                 cpu_stat = host_stats['cpu']
+                last_cpu_stat = {}
                 for date, cpu_info in db_stats:
                     stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
                     cpu_name = cpu_info.name
                     if cpu_name not in cpu_stat:
                         cpu_stat[cpu_name] = {}
-                    cpu_stat[cpu_name][stat_time] = get_cpu_usage(cpu_info)
+                    cpu_stat[cpu_name][stat_time] = \
+                        get_cpu_usage(cpu_info, last_cpu_stat.get(cpu_name, None))
+                    last_cpu_stat[cpu_name] = cpu_info
             elif field == 'net':
                 host_stats['net'] = {}
                 net_stat = host_stats['net']
@@ -82,7 +91,6 @@ def ajax_hostinfo():
                         get_net_flow_stat((date, net_info),
                                           last_net_stat.get(net_dev_name, None))
                     last_net_stat[net_dev_name] = (date, net_info)
-
 
     return jsonify(stats=host_stats)
 
