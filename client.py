@@ -1,12 +1,14 @@
-import gevent
-from proto import simple_pb2
 import socket
-import net
 import time
-import cpu
 import optparse
-import rpc
 import sys
+
+import gevent
+
+from monsit.proto import simple_pb2
+import net
+import cpu
+import rpc
 
 
 def get_register_info():

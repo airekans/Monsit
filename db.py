@@ -1,6 +1,8 @@
-import mysql.connector
 import datetime
-from proto import simple_pb2
+
+import mysql.connector
+
+from monsit.proto import simple_pb2
 
 
 _DB_CONFIG = {'host': '127.0.0.1',

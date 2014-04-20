@@ -1,9 +1,11 @@
-import gevent.server
-import gevent.socket
 import struct
 import google.protobuf.service
 from google.protobuf import message
-from proto import rpc_meta_pb2
+
+import gevent.server
+import gevent.socket
+
+from monsit.proto import rpc_meta_pb2
 
 
 class RpcController(google.protobuf.service.RpcController):

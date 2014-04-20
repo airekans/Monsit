@@ -1,6 +1,8 @@
-from proto import simple_pb2
-import rpc
 from gevent import monkey
+
+from monsit.proto import simple_pb2
+import rpc
+
 monkey.patch_all()
 
 import db
