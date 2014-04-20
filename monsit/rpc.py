@@ -83,6 +83,21 @@ class TcpChannel(google.protobuf.service.RpcChannel):
     def connect(self):
         self._socket.connect(self._addr)
 
+    def _recv(self, expected_size):
+        recv_buf = ''
+        while len(recv_buf) < expected_size:
+            try:
+                buf = self._socket.recv(expected_size - len(recv_buf))
+                if len(buf) == 0:
+                    break
+
+                recv_buf += buf
+            except Exception, e:
+                print e
+                break
+
+        return recv_buf
+
     def CallMethod(self, method_descriptor, rpc_controller,
                    request, response_class, done):
         service_descriptor = method_descriptor.containing_service
@@ -94,31 +109,41 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         serialized_req = _serialize_message(meta_info, request)
         self._socket.send(serialized_req)
 
-        pb_buf = self._socket.recv(2 + struct.calcsize("!I"))
+        expected_size = 2 + struct.calcsize("!I")
+        pb_buf = self._recv(expected_size)
+        if len(pb_buf) < expected_size:
+            rpc_controller.SetFailed('rsp buffer broken')
+            print 'rsp buffer broken'
+            return None
         if pb_buf[:2] != 'PB':
-            print 'buffer not begin with PB'
+            rpc_controller.SetFailed('rsp buffer not begin with PB')
+            print 'rsp buffer not begin with PB'
             return None
 
         buf_size = struct.unpack("!I", pb_buf[2:])[0]
-        pb_buf = self._socket.recv(buf_size)
+        pb_buf = self._recv(buf_size)
         result = parse_meta(pb_buf)
         if result is None:
+            rpc_controller.SetFailed('pb decode meta error')
             print 'pb decode error, skip this message'
             return None
 
         meta_len, pb_msg_len, meta_info = result
         if meta_info.flow_id != flow_id:
+            rpc_controller.SetFailed('rsp flow id not match')
             print 'rsp flow id not match:', flow_id, meta_info.flow_id
             return None
         elif meta_info.service_name != service_descriptor.full_name or \
              meta_info.method_name != method_descriptor.name or \
              meta_info.msg_name != response_class.DESCRIPTOR.full_name:
+            rpc_controller.SetFailed('rsp meta not match')
             print 'rsp meta not match'
             return None
 
         rsp = _parse_message(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
                         response_class)
         if rsp is None:
+            rpc_controller.SetFailed('pb decode rsp error')
             return None
 
         if done is not None:
