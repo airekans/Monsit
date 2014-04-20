@@ -203,7 +203,9 @@ class DBConnection(object):
 
     def get_host_stats(self, host_id, fields):
         cursor = self.__cnx.cursor()
-        stmt_template = 'SELECT * FROM %s LIMIT 100'
+        stmt_template = ('SELECT * FROM '
+                         '(SELECT * FROM %s ORDER BY datetime DESC LIMIT 100) '
+                         'sub ORDER BY datetime ASC')
         stats = {}
         for field in fields:
             if field in _VALID_FIELDS:
