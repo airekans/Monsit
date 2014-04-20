@@ -4,11 +4,9 @@ import optparse
 import sys
 
 import gevent
+from monsit import cpu, rpc, net
 
 from monsit.proto import simple_pb2
-import net
-import cpu
-import rpc
 
 
 def get_register_info():

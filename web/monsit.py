@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, abort, jsonify
-import db
+from monsit import db
 
 app = Flask(__name__)
 

@@ -1,11 +1,9 @@
 from gevent import monkey
+from monsit import db, rpc
 
 from monsit.proto import simple_pb2
-import rpc
 
 monkey.patch_all()
-
-import db
 
 
 class MonsitServiceImpl(simple_pb2.MonsitService):
