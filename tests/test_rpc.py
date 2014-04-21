@@ -84,6 +84,58 @@ class TcpChannelTest(unittest.TestCase):
         self.assertEqual(1, channel.get_flow_id())
         self.assertEqual(rsp, actual_rsp, str(actual_rsp))
 
+    def test_CallMethodWithEmptyBuffer(self):
+        channel = self.channel
+        self.assertEqual(0, channel.get_flow_id())
+
+        serialized_request = self.get_serialize_message(0, self.request)
+        channel.get_socket().set_recv_content('')
+
+        controller = rpc.RpcController()
+        actual_rsp = channel.CallMethod(self.method, controller,
+                                        self.request, self.response_class, None)
+
+        self.assertEqual(serialized_request, channel.get_socket().get_send_content())
+        self.assertEqual(1, channel.get_flow_id())
+        self.assertIsNone(actual_rsp)
+        self.assertTrue(controller.Failed())
+
+    def test_CallMethodWithBufferNotStartsWithPb(self):
+        channel = self.channel
+        self.assertEqual(0, channel.get_flow_id())
+
+        serialized_request = self.get_serialize_message(0, self.request)
+        channel.get_socket().set_recv_content('AB1231')
+
+        controller = rpc.RpcController()
+        actual_rsp = channel.CallMethod(self.method, controller,
+                                        self.request, self.response_class, None)
+
+        self.assertEqual(serialized_request, channel.get_socket().get_send_content())
+        self.assertEqual(1, channel.get_flow_id())
+        self.assertIsNone(actual_rsp)
+        self.assertTrue(controller.Failed())
+
+    def test_CallMethodWithWrongFlowId(self):
+        channel = self.channel
+        self.assertEqual(0, channel.get_flow_id())
+
+        serialized_request = self.get_serialize_message(0, self.request)
+        rsp = self.response_class(return_code=0, msg='SUCCESS')
+        serialized_response = self.get_serialize_message(2, rsp)
+        channel.get_socket().set_recv_content(serialized_response)
+
+        controller = rpc.RpcController()
+        actual_rsp = channel.CallMethod(self.method, controller,
+                                        self.request, self.response_class, None)
+
+        self.assertEqual(serialized_request, channel.get_socket().get_send_content())
+        self.assertEqual(1, channel.get_flow_id())
+        self.assertIsNone(actual_rsp)
+        self.assertTrue(controller.Failed())
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
