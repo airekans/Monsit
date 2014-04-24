@@ -4,6 +4,9 @@ from google.protobuf import message
 
 import gevent.server
 import gevent.socket
+import gevent.queue
+import gevent.event
+import gevent
 
 from monsit.proto import rpc_meta_pb2
 
@@ -75,6 +78,9 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         self._socket = gevent.socket.socket()
         self.connect()
 
+        self._req_queue = gevent.queue.Queue()
+        gevent.spawn(self.worker_run)
+
     def _get_flow_id(self):
         flow_id = self._flow_id
         self._flow_id += 1
@@ -98,8 +104,12 @@ class TcpChannel(google.protobuf.service.RpcChannel):
 
         return recv_buf
 
-    def CallMethod(self, method_descriptor, rpc_controller,
-                   request, response_class, done):
+    def worker_run(self):
+        while True:
+            work_fun = self._req_queue.get()
+            work_fun()
+
+    def call_method(self, method_descriptor, rpc_controller, request, response_class, done):
         service_descriptor = method_descriptor.containing_service
         flow_id = self._get_flow_id()
         meta_info = rpc_meta_pb2.MetaInfo()
@@ -108,7 +118,6 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         meta_info.method_name = method_descriptor.name
         serialized_req = _serialize_message(meta_info, request)
         self._socket.send(serialized_req)
-
         expected_size = 2 + struct.calcsize("!I")
         pb_buf = self._recv(expected_size)
         if len(pb_buf) < expected_size:
@@ -119,7 +128,6 @@ class TcpChannel(google.protobuf.service.RpcChannel):
             rpc_controller.SetFailed('rsp buffer not begin with PB')
             print 'rsp buffer not begin with PB'
             return None
-
         buf_size = struct.unpack("!I", pb_buf[2:])[0]
         pb_buf = self._recv(buf_size)
         result = parse_meta(pb_buf)
@@ -127,30 +135,42 @@ class TcpChannel(google.protobuf.service.RpcChannel):
             rpc_controller.SetFailed('pb decode meta error')
             print 'pb decode error, skip this message'
             return None
-
         meta_len, pb_msg_len, meta_info = result
         if meta_info.flow_id != flow_id:
             rpc_controller.SetFailed('rsp flow id not match')
             print 'rsp flow id not match:', flow_id, meta_info.flow_id
             return None
         elif meta_info.service_name != service_descriptor.full_name or \
-             meta_info.method_name != method_descriptor.name or \
-             meta_info.msg_name != response_class.DESCRIPTOR.full_name:
+                        meta_info.method_name != method_descriptor.name or \
+                        meta_info.msg_name != response_class.DESCRIPTOR.full_name:
             rpc_controller.SetFailed('rsp meta not match')
             print 'rsp meta not match'
             return None
-
         rsp = _parse_message(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
-                        response_class)
+                             response_class)
         if rsp is None:
             rpc_controller.SetFailed('pb decode rsp error')
             return None
-
         if done is not None:
             done(rsp)
             return None
         else:
             return rsp
+
+    # when done is None, it means the method call is synchronous
+    # when it's not None, it means the call is asynchronous
+    def CallMethod(self, method_descriptor, rpc_controller,
+                   request, response_class, done):
+        if done is None:
+            res = gevent.event.AsyncResult()
+            done = lambda rsp: res.set(rsp)
+            self._req_queue.put_nowait(lambda: self.call_method(method_descriptor, rpc_controller,
+                                                                request, response_class, done))
+            return res.get()
+        else:
+            self._req_queue.put_nowait(lambda: self.call_method(method_descriptor, rpc_controller,
+                                                                request, response_class, done))
+            return None
 
 
 class RpcServer(object):
