@@ -2,17 +2,28 @@ from monsit import rpc
 import unittest
 from test_proto import test_pb2
 from monsit.proto import rpc_meta_pb2
+import gevent
 
 
 class FakeTcpSocket(object):
-    def __init__(self, recv_content):
-        self.__recv_content = recv_content
+    def __init__(self):
+        self.__recv_content = ""
         self.__send_content = ""
+        self.__is_connected = False
 
     def connect(self, addr):
-        pass
+        self.__is_connected = True
+
+    def close(self):
+        self.__is_connected = False
+
+    def is_connected(self):
+        return self.__is_connected
 
     def recv(self, size):
+        while len(self.__send_content) == 0: # not recv anything
+            gevent.sleep(0)
+
         if len(self.__recv_content) == 0:
             return ""
 
@@ -33,11 +44,8 @@ class FakeTcpSocket(object):
 class FakeTcpChannel(rpc.TcpChannel):
 
     def __init__(self, addr, recv_content):
-        rpc.TcpChannel.__init__(self, addr)
-        self._socket = FakeTcpSocket(recv_content)
-
-    def connect(self):
-        pass
+        rpc.TcpChannel.__init__(self, addr, FakeTcpSocket)
+        self._socket.set_recv_content(recv_content)
 
     def get_socket(self):
         return self._socket
@@ -50,6 +58,8 @@ class TcpChannelTest(unittest.TestCase):
 
     def setUp(self):
         self.channel = FakeTcpChannel(('127.0.0.1', 11111), "")
+        self.assertTrue(self.channel.get_socket().is_connected())
+
         self.service_stub = test_pb2.TestService_Stub(self.channel)
         self.method = None
         for method in self.service_stub.GetDescriptor().methods:
@@ -61,6 +71,11 @@ class TcpChannelTest(unittest.TestCase):
         self.request_class = request_class
         self.request = request_class(name='test', num=123)
         self.response_class = self.service_stub.GetResponseClass(self.method)
+
+    def tearDown(self):
+        sock = self.channel.get_socket()
+        self.channel.close()
+        self.assertFalse(sock.is_connected())
 
     def get_serialize_message(self, flow_id, msg):
         meta_info = rpc_meta_pb2.MetaInfo(flow_id=flow_id, service_name=self.service_descriptor.full_name,

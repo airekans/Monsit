@@ -71,11 +71,11 @@ def _parse_message(buf, msg_cls):
 
 
 class TcpChannel(google.protobuf.service.RpcChannel):
-    def __init__(self, addr):
+    def __init__(self, addr, socket_cls=gevent.socket.socket):
         google.protobuf.service.RpcChannel.__init__(self)
         self._flow_id = 0
         self._addr = addr
-        self._socket = gevent.socket.socket()
+        self._socket = socket_cls()
         self.connect()
 
         self._send_task_queue = gevent.queue.Queue()
@@ -83,8 +83,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         self._workers = [gevent.spawn(self.send_loop), gevent.spawn(self.recv_loop)]
 
     def __del__(self):
-        self._socket.close()
-        gevent.killall(self._workers)
+        self.close()
 
     def _get_flow_id(self):
         flow_id = self._flow_id
@@ -93,6 +92,10 @@ class TcpChannel(google.protobuf.service.RpcChannel):
 
     def connect(self):
         self._socket.connect(self._addr)
+
+    def close(self):
+        self._socket.close()
+        gevent.killall(self._workers)
 
     def _recv(self, expected_size):
         recv_buf = ''
@@ -155,9 +158,16 @@ class TcpChannel(google.protobuf.service.RpcChannel):
 
                 rsp = _parse_message(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
                                      response_class)
+                del self._recv_infos[meta_info.flow_id]
                 done(rsp)
             else:
                 print 'flow id not found:', meta_info.flow_id
+
+        # check if there is any request has not been processed.
+        for v in self._recv_infos.itervalues():
+            expected_meta, rpc_controller, response_class, done = v
+            rpc_controller.SetFailed('channel has been closed prematurely')
+            done(None)
 
     def send_loop(self):
         while True:
