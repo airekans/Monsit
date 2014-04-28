@@ -214,6 +214,66 @@ class RpcServer(object):
         self._services = {}
         self._stream_server = gevent.server.StreamServer(addr, self._handle_connection)
 
+    def _handle_connection2(self, socket, addr):
+        rsp_queue = gevent.queue.Queue()
+        is_connection_closed = [False]
+
+        def call_service(req_info):
+            meta_info, service, method, req = req_info
+            controller = RpcController()
+            rsp = service.CallMethod(method, controller, req, None)
+            rsp_queue.put_nowait((meta_info, rsp))
+
+        def recv_req():
+            content = ""
+            while True:
+                try:
+                    recv_buf = socket.recv(1024)
+                    if len(recv_buf) == 0:
+                        break
+                except Exception, e:
+                    print e
+                    break
+
+                content += recv_buf
+                mem_content = memoryview(content)
+                cur_index = 0
+                while cur_index < len(content):
+                    if len(mem_content[cur_index:]) < 6:
+                        break
+                    elif mem_content[cur_index:cur_index + 2] != 'PB':
+                        cur_index += 2  # skip the first 2 bytes
+                        break
+
+                    (buf_size,) = struct.unpack('!I',
+                                                mem_content[cur_index + 2: cur_index + 6].tobytes())
+                    if len(mem_content[cur_index + 6:]) < buf_size:
+                        break
+
+                    pb_buf = mem_content[cur_index + 6: cur_index + 6 + buf_size].tobytes()
+                    cur_index += buf_size + 6
+                    result = self.parse_message(pb_buf)
+                    if result is None:
+                        print 'pb decode error, skip this message'
+                        break
+
+                    gevent.spawn(lambda: call_service(result))
+
+                if cur_index > 0:
+                    content = content[cur_index:]
+
+            print addr, 'has disconnected'
+            is_connection_closed[0] = True
+
+        def send_rsp():
+            while not is_connection_closed[0]:
+                meta_info, rsp = rsp_queue.get()
+                serialized_rsp = _serialize_message(meta_info, rsp)
+                socket.send(serialized_rsp)
+
+        workers = [gevent.spawn(recv_req), gevent.spawn(send_rsp)]
+        gevent.joinall(workers)
+
     def _handle_connection(self, socket, addr):
         content = ""
         while True:
