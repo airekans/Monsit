@@ -194,5 +194,84 @@ class TcpChannelTest(unittest.TestCase):
         self.assertEqual(rsp, actual_rsp[0], str(actual_rsp))
 
 
+class FakeRpcServer(rpc.RpcServer):
+
+    def __init__(self):
+        self._addr = ('127.0.0.1', 12345)
+        self._services = {}
+        # not calling parent's __init__ to bypass the StreamServer init
+
+    def get_service(self, name):
+        return self._services[name]
+
+    def run(self):
+        pass
+
+
+class RpcServerTest(unittest.TestCase):
+
+    def setUp(self):
+        self.server = FakeRpcServer()
+
+        self.service = test_pb2.TestService()
+        self.method = None
+        for method in self.service.GetDescriptor().methods:
+            self.method = method
+            break
+
+        self.service_descriptor = self.service.GetDescriptor()
+
+    def get_serialize_message(self, flow_id, service_desc, method_name, msg):
+        meta_info = rpc_meta_pb2.MetaInfo(flow_id=flow_id, service_name=service_desc.full_name,
+                                          method_name=method_name)
+        return rpc._serialize_message(meta_info, msg)
+
+    def test_register_service(self):
+        service_name = self.service_descriptor.full_name
+        self.server.register_service(self.service)
+
+        self.assertIs(self.service, self.server.get_service(service_name))
+
+    def test_parse_message_with_empty_buf(self):
+        self.assertIsNone(self.server.parse_message(''))
+
+    def test_parse_message_with_non_reg_service(self):
+        req = test_pb2.TestRequest(name='abc', num=1)
+        serialized_req = self.get_serialize_message(1, self.service_descriptor,
+                                                    self.method.name, req)
+        self.assertIsNone(self.server.parse_message(serialized_req[6:]))
+
+    def test_parse_message_with_wrong_method(self):
+        self.server.register_service(self.service)
+
+        req = test_pb2.TestRequest(name='abc', num=1)
+        serialized_req = self.get_serialize_message(1, self.service_descriptor,
+                                                    'WrongMethodName', req)
+        self.assertIsNone(self.server.parse_message(serialized_req[6:]))
+
+    def test_parse_message_with_wrong_msg(self):
+        self.server.register_service(self.service)
+
+        req = test_pb2.TestRequest(name='abc', num=1)
+        serialized_req = self.get_serialize_message(1, self.service_descriptor,
+                                                    self.method.name, req)
+        wrong_req = serialized_req[:-3] + 'abc'
+        self.assertIsNone(self.server.parse_message(wrong_req[6:]))
+
+    def test_parse_message(self):
+        self.server.register_service(self.service)
+
+        req = test_pb2.TestRequest(name='abc', num=1)
+        serialized_req = self.get_serialize_message(1, self.service_descriptor,
+                                                    self.method.name, req)
+        result = self.server.parse_message(serialized_req[6:])
+        self.assertIsNotNone(result)
+        self.assertTrue(len(result) == 4)
+        meta_info, service, method, actual_req = result
+        self.assertIs(self.service, service)
+        self.assertIs(self.method, method)
+        self.assertEqual(req, actual_req)
+
+
 if __name__ == '__main__':
     unittest.main()
