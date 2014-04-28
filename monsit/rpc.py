@@ -115,53 +115,8 @@ class TcpChannel(google.protobuf.service.RpcChannel):
     def recv_loop(self):
         expected_size = 2 + struct.calcsize("!I")
         while True:
-            pb_buf = self._recv(expected_size)
-            if len(pb_buf) == 0:
-                print 'socket has been closed'
+            if not self.recv_rsp():
                 break
-            if len(pb_buf) < expected_size:
-                print 'rsp buffer broken'
-                continue
-            if pb_buf[:2] != 'PB':
-                print 'rsp buffer not begin with PB'
-                continue
-
-            buf_size = struct.unpack("!I", pb_buf[2:])[0]
-            pb_buf = self._recv(buf_size)
-            if len(pb_buf) == 0:
-                print 'socket has been closed'
-                break
-
-            result = parse_meta(pb_buf)
-            if result is None:
-                print 'pb decode error, skip this message'
-                continue
-
-            meta_len, pb_msg_len, meta_info = result
-
-            if meta_info.flow_id in self._recv_infos:
-                expected_meta, rpc_controller, response_class, done = \
-                    self._recv_infos[meta_info.flow_id]
-
-                if meta_info.flow_id != expected_meta.flow_id:
-                    rpc_controller.SetFailed('rsp flow id not match')
-                    print 'rsp flow id not match:', expected_meta.flow_id, meta_info.flow_id
-                    done(None)
-                    continue
-                elif meta_info.service_name != expected_meta.service_name or \
-                                meta_info.method_name != expected_meta.method_name or \
-                                meta_info.msg_name != response_class.DESCRIPTOR.full_name:
-                    rpc_controller.SetFailed('rsp meta not match')
-                    print 'rsp meta not match'
-                    done(None)
-                    continue
-
-                rsp = _parse_message(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
-                                     response_class)
-                del self._recv_infos[meta_info.flow_id]
-                done(rsp)
-            else:
-                print 'flow id not found:', meta_info.flow_id
 
         # check if there is any request has not been processed.
         for v in self._recv_infos.itervalues():
@@ -185,59 +140,57 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         self._socket.send(serialized_req)
         self._recv_infos[flow_id] = meta_info, rpc_controller, response_class, done
 
-    def call_method(self, method_descriptor, rpc_controller, request, response_class, done):
-        service_descriptor = method_descriptor.containing_service
-        flow_id = self._get_flow_id()
-        meta_info = rpc_meta_pb2.MetaInfo()
-        meta_info.flow_id = flow_id
-        meta_info.service_name = service_descriptor.full_name
-        meta_info.method_name = method_descriptor.name
-        serialized_req = _serialize_message(meta_info, request)
-        self._socket.send(serialized_req)
+    def recv_rsp(self):
         expected_size = 2 + struct.calcsize("!I")
         pb_buf = self._recv(expected_size)
+        if len(pb_buf) == 0:
+            print 'socket has been closed'
+            return False
         if len(pb_buf) < expected_size:
-            rpc_controller.SetFailed('rsp buffer broken')
             print 'rsp buffer broken'
-            done(None)
-            return None
+            return True
         if pb_buf[:2] != 'PB':
-            rpc_controller.SetFailed('rsp buffer not begin with PB')
             print 'rsp buffer not begin with PB'
-            done(None)
-            return None
+            return True
+
         buf_size = struct.unpack("!I", pb_buf[2:])[0]
         pb_buf = self._recv(buf_size)
+        if len(pb_buf) == 0:
+            print 'socket has been closed'
+            return False
+
         result = parse_meta(pb_buf)
         if result is None:
-            rpc_controller.SetFailed('pb decode meta error')
             print 'pb decode error, skip this message'
-            done(None)
-            return None
+            return True
+
         meta_len, pb_msg_len, meta_info = result
-        if meta_info.flow_id != flow_id:
-            rpc_controller.SetFailed('rsp flow id not match')
-            print 'rsp flow id not match:', flow_id, meta_info.flow_id
-            done(None)
-            return None
-        elif meta_info.service_name != service_descriptor.full_name or \
-                        meta_info.method_name != method_descriptor.name or \
-                        meta_info.msg_name != response_class.DESCRIPTOR.full_name:
-            rpc_controller.SetFailed('rsp meta not match')
-            print 'rsp meta not match'
-            done(None)
-            return None
-        rsp = _parse_message(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
-                             response_class)
-        if rsp is None:
-            rpc_controller.SetFailed('pb decode rsp error')
+
+        if meta_info.flow_id in self._recv_infos:
+            expected_meta, rpc_controller, response_class, done = \
+                self._recv_infos[meta_info.flow_id]
+
+            if meta_info.flow_id != expected_meta.flow_id:
+                rpc_controller.SetFailed('rsp flow id not match')
+                print 'rsp flow id not match:', expected_meta.flow_id, meta_info.flow_id
+                done(None)
+                return True
+            elif meta_info.service_name != expected_meta.service_name or \
+                            meta_info.method_name != expected_meta.method_name or \
+                            meta_info.msg_name != response_class.DESCRIPTOR.full_name:
+                rpc_controller.SetFailed('rsp meta not match')
+                print 'rsp meta not match'
+                done(None)
+                return True
+
+            rsp = _parse_message(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
+                                 response_class)
+            del self._recv_infos[meta_info.flow_id]
             done(rsp)
-            return None
-        if done is not None:
-            done(rsp)
-            return None
+            return True
         else:
-            return rsp
+            print 'flow id not found:', meta_info.flow_id
+            return True
 
     # when done is None, it means the method call is synchronous
     # when it's not None, it means the call is asynchronous
