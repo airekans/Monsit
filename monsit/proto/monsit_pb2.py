@@ -13,7 +13,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='monsit.proto',
   package='',
-  serialized_pb='\n\x0cmonsit.proto\"\x91\x01\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nuser_count\x18\x02 \x02(\x05\x12\x12\n\nnice_count\x18\x03 \x02(\x05\x12\x11\n\tsys_count\x18\x04 \x02(\x05\x12\x12\n\nidle_count\x18\x05 \x02(\x05\x12\x14\n\x0ciowait_count\x18\x06 \x02(\x05\x12\x13\n\x0btotal_count\x18\x07 \x02(\x05\"I\n\x07NetInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\n\n\x02ip\x18\x02 \x02(\t\x12\x11\n\trecv_byte\x18\x03 \x02(\x03\x12\x11\n\tsend_byte\x18\x04 \x02(\x03\"n\n\rSimpleRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12\x1b\n\tcpu_infos\x18\x03 \x03(\x0b\x32\x08.CPUInfo\x12\x1b\n\tnet_infos\x18\x04 \x03(\x0b\x32\x08.NetInfo\"2\n\x0eSimpleResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"4\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t2k\n\rMonsitService\x12/\n\x08Register\x12\x10.RegisterRequest\x1a\x11.RegisterResponse\x12)\n\x06Report\x12\x0e.SimpleRequest\x1a\x0f.SimpleResponseB\x03\x90\x01\x01')
+  serialized_pb='\n\x0cmonsit.proto\"\x91\x01\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nuser_count\x18\x02 \x02(\x05\x12\x12\n\nnice_count\x18\x03 \x02(\x05\x12\x11\n\tsys_count\x18\x04 \x02(\x05\x12\x12\n\nidle_count\x18\x05 \x02(\x05\x12\x14\n\x0ciowait_count\x18\x06 \x02(\x05\x12\x13\n\x0btotal_count\x18\x07 \x02(\x05\"I\n\x07NetInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\n\n\x02ip\x18\x02 \x02(\t\x12\x11\n\trecv_byte\x18\x03 \x02(\x03\x12\x11\n\tsend_byte\x18\x04 \x02(\x03\"Q\n\x0eVirtualMemInfo\x12\r\n\x05total\x18\x01 \x02(\x03\x12\x11\n\tavailable\x18\x02 \x02(\x03\x12\x0c\n\x04used\x18\x03 \x02(\x03\x12\x0f\n\x07percent\x18\x04 \x02(\x05\"I\n\x0bSwapMemInfo\x12\r\n\x05total\x18\x01 \x02(\x03\x12\x0c\n\x04\x66ree\x18\x02 \x02(\x03\x12\x0c\n\x04used\x18\x03 \x02(\x03\x12\x0f\n\x07percent\x18\x04 \x02(\x05\"O\n\x07MemInfo\x12$\n\x0bvirtual_mem\x18\x01 \x02(\x0b\x32\x0f.VirtualMemInfo\x12\x1e\n\x08swap_mem\x18\x02 \x02(\x0b\x32\x0c.SwapMemInfo\"\x8a\x01\n\rReportRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12\x1b\n\tcpu_infos\x18\x03 \x03(\x0b\x32\x08.CPUInfo\x12\x1b\n\tnet_infos\x18\x04 \x03(\x0b\x32\x08.NetInfo\x12\x1a\n\x08mem_info\x18\x05 \x02(\x0b\x32\x08.MemInfo\"2\n\x0eReportResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"4\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t2k\n\rMonsitService\x12/\n\x08Register\x12\x10.RegisterRequest\x1a\x11.RegisterResponse\x12)\n\x06Report\x12\x0e.ReportRequest\x1a\x0f.ReportResponseB\x03\x90\x01\x01')
 
 
 
@@ -137,38 +137,38 @@ _NETINFO = descriptor.Descriptor(
 )
 
 
-_SIMPLEREQUEST = descriptor.Descriptor(
-  name='SimpleRequest',
-  full_name='SimpleRequest',
+_VIRTUALMEMINFO = descriptor.Descriptor(
+  name='VirtualMemInfo',
+  full_name='VirtualMemInfo',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     descriptor.FieldDescriptor(
-      name='host_name', full_name='SimpleRequest.host_name', index=0,
-      number=1, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=unicode("", "utf-8"),
+      name='total', full_name='VirtualMemInfo.total', index=0,
+      number=1, type=3, cpp_type=2, label=2,
+      has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='datetime', full_name='SimpleRequest.datetime', index=1,
+      name='available', full_name='VirtualMemInfo.available', index=1,
       number=2, type=3, cpp_type=2, label=2,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='cpu_infos', full_name='SimpleRequest.cpu_infos', index=2,
-      number=3, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
+      name='used', full_name='VirtualMemInfo.used', index=2,
+      number=3, type=3, cpp_type=2, label=2,
+      has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='net_infos', full_name='SimpleRequest.net_infos', index=3,
-      number=4, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
+      name='percent', full_name='VirtualMemInfo.percent', index=3,
+      number=4, type=5, cpp_type=1, label=2,
+      has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -182,26 +182,166 @@ _SIMPLEREQUEST = descriptor.Descriptor(
   is_extendable=False,
   extension_ranges=[],
   serialized_start=239,
-  serialized_end=349,
+  serialized_end=320,
 )
 
 
-_SIMPLERESPONSE = descriptor.Descriptor(
-  name='SimpleResponse',
-  full_name='SimpleResponse',
+_SWAPMEMINFO = descriptor.Descriptor(
+  name='SwapMemInfo',
+  full_name='SwapMemInfo',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     descriptor.FieldDescriptor(
-      name='return_code', full_name='SimpleResponse.return_code', index=0,
+      name='total', full_name='SwapMemInfo.total', index=0,
+      number=1, type=3, cpp_type=2, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='free', full_name='SwapMemInfo.free', index=1,
+      number=2, type=3, cpp_type=2, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='used', full_name='SwapMemInfo.used', index=2,
+      number=3, type=3, cpp_type=2, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='percent', full_name='SwapMemInfo.percent', index=3,
+      number=4, type=5, cpp_type=1, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=322,
+  serialized_end=395,
+)
+
+
+_MEMINFO = descriptor.Descriptor(
+  name='MemInfo',
+  full_name='MemInfo',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    descriptor.FieldDescriptor(
+      name='virtual_mem', full_name='MemInfo.virtual_mem', index=0,
+      number=1, type=11, cpp_type=10, label=2,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='swap_mem', full_name='MemInfo.swap_mem', index=1,
+      number=2, type=11, cpp_type=10, label=2,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=397,
+  serialized_end=476,
+)
+
+
+_REPORTREQUEST = descriptor.Descriptor(
+  name='ReportRequest',
+  full_name='ReportRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    descriptor.FieldDescriptor(
+      name='host_name', full_name='ReportRequest.host_name', index=0,
+      number=1, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='datetime', full_name='ReportRequest.datetime', index=1,
+      number=2, type=3, cpp_type=2, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='cpu_infos', full_name='ReportRequest.cpu_infos', index=2,
+      number=3, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='net_infos', full_name='ReportRequest.net_infos', index=3,
+      number=4, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='mem_info', full_name='ReportRequest.mem_info', index=4,
+      number=5, type=11, cpp_type=10, label=2,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=479,
+  serialized_end=617,
+)
+
+
+_REPORTRESPONSE = descriptor.Descriptor(
+  name='ReportResponse',
+  full_name='ReportResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    descriptor.FieldDescriptor(
+      name='return_code', full_name='ReportResponse.return_code', index=0,
       number=1, type=5, cpp_type=1, label=2,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='msg', full_name='SimpleResponse.msg', index=1,
+      name='msg', full_name='ReportResponse.msg', index=1,
       number=2, type=9, cpp_type=9, label=2,
       has_default_value=False, default_value=unicode("", "utf-8"),
       message_type=None, enum_type=None, containing_type=None,
@@ -216,8 +356,8 @@ _SIMPLERESPONSE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=351,
-  serialized_end=401,
+  serialized_start=619,
+  serialized_end=669,
 )
 
 
@@ -244,8 +384,8 @@ _REGISTERREQUEST = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=403,
-  serialized_end=439,
+  serialized_start=671,
+  serialized_end=707,
 )
 
 
@@ -279,16 +419,22 @@ _REGISTERRESPONSE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=441,
-  serialized_end=493,
+  serialized_start=709,
+  serialized_end=761,
 )
 
-_SIMPLEREQUEST.fields_by_name['cpu_infos'].message_type = _CPUINFO
-_SIMPLEREQUEST.fields_by_name['net_infos'].message_type = _NETINFO
+_MEMINFO.fields_by_name['virtual_mem'].message_type = _VIRTUALMEMINFO
+_MEMINFO.fields_by_name['swap_mem'].message_type = _SWAPMEMINFO
+_REPORTREQUEST.fields_by_name['cpu_infos'].message_type = _CPUINFO
+_REPORTREQUEST.fields_by_name['net_infos'].message_type = _NETINFO
+_REPORTREQUEST.fields_by_name['mem_info'].message_type = _MEMINFO
 DESCRIPTOR.message_types_by_name['CPUInfo'] = _CPUINFO
 DESCRIPTOR.message_types_by_name['NetInfo'] = _NETINFO
-DESCRIPTOR.message_types_by_name['SimpleRequest'] = _SIMPLEREQUEST
-DESCRIPTOR.message_types_by_name['SimpleResponse'] = _SIMPLERESPONSE
+DESCRIPTOR.message_types_by_name['VirtualMemInfo'] = _VIRTUALMEMINFO
+DESCRIPTOR.message_types_by_name['SwapMemInfo'] = _SWAPMEMINFO
+DESCRIPTOR.message_types_by_name['MemInfo'] = _MEMINFO
+DESCRIPTOR.message_types_by_name['ReportRequest'] = _REPORTREQUEST
+DESCRIPTOR.message_types_by_name['ReportResponse'] = _REPORTRESPONSE
 DESCRIPTOR.message_types_by_name['RegisterRequest'] = _REGISTERREQUEST
 DESCRIPTOR.message_types_by_name['RegisterResponse'] = _REGISTERRESPONSE
 
@@ -304,17 +450,35 @@ class NetInfo(message.Message):
   
   # @@protoc_insertion_point(class_scope:NetInfo)
 
-class SimpleRequest(message.Message):
+class VirtualMemInfo(message.Message):
   __metaclass__ = reflection.GeneratedProtocolMessageType
-  DESCRIPTOR = _SIMPLEREQUEST
+  DESCRIPTOR = _VIRTUALMEMINFO
   
-  # @@protoc_insertion_point(class_scope:SimpleRequest)
+  # @@protoc_insertion_point(class_scope:VirtualMemInfo)
 
-class SimpleResponse(message.Message):
+class SwapMemInfo(message.Message):
   __metaclass__ = reflection.GeneratedProtocolMessageType
-  DESCRIPTOR = _SIMPLERESPONSE
+  DESCRIPTOR = _SWAPMEMINFO
   
-  # @@protoc_insertion_point(class_scope:SimpleResponse)
+  # @@protoc_insertion_point(class_scope:SwapMemInfo)
+
+class MemInfo(message.Message):
+  __metaclass__ = reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _MEMINFO
+  
+  # @@protoc_insertion_point(class_scope:MemInfo)
+
+class ReportRequest(message.Message):
+  __metaclass__ = reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _REPORTREQUEST
+  
+  # @@protoc_insertion_point(class_scope:ReportRequest)
+
+class ReportResponse(message.Message):
+  __metaclass__ = reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _REPORTRESPONSE
+  
+  # @@protoc_insertion_point(class_scope:ReportResponse)
 
 class RegisterRequest(message.Message):
   __metaclass__ = reflection.GeneratedProtocolMessageType
@@ -335,8 +499,8 @@ _MONSITSERVICE = descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=495,
-  serialized_end=602,
+  serialized_start=763,
+  serialized_end=870,
   methods=[
   descriptor.MethodDescriptor(
     name='Register',
@@ -352,8 +516,8 @@ _MONSITSERVICE = descriptor.ServiceDescriptor(
     full_name='MonsitService.Report',
     index=1,
     containing_service=None,
-    input_type=_SIMPLEREQUEST,
-    output_type=_SIMPLERESPONSE,
+    input_type=_REPORTREQUEST,
+    output_type=_REPORTRESPONSE,
     options=None,
   ),
 ])

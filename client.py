@@ -16,7 +16,7 @@ def get_register_info():
 
 
 def collect_machine_info():
-    machine_info = monsit_pb2.SimpleRequest()
+    machine_info = monsit_pb2.ReportRequest()
     machine_info.host_name = socket.gethostname()
 
     cpu_stats = cpu.get_cpu_stat()
