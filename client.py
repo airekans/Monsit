@@ -4,7 +4,7 @@ import optparse
 import sys
 
 import gevent
-from monsit import cpu, rpc, net
+from monsit import cpu, rpc, net, memory
 
 from monsit.proto import monsit_pb2
 
@@ -37,6 +37,17 @@ def collect_machine_info():
         net_info.ip = dev_info.ip
         net_info.recv_byte = dev_info.recv_byte
         net_info.send_byte = dev_info.send_byte
+
+    vmem_info, swap_info = memory.get_mem_stat()
+    mem_info = machine_info.mem_info
+    mem_info.virtual_mem.total = vmem_info.total
+    mem_info.virtual_mem.available = vmem_info.available
+    mem_info.virtual_mem.used = vmem_info.used
+    mem_info.virtual_mem.percent = int(vmem_info.percent)
+    mem_info.swap_mem.total = swap_info.total
+    mem_info.swap_mem.free = swap_info.free
+    mem_info.swap_mem.used = swap_info.used
+    mem_info.swap_mem.percent = int(swap_info.percent)
 
     machine_info.datetime = int(time.time())
 

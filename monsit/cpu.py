@@ -9,6 +9,7 @@ def parse_cpu_stat(stat_field):
                  'total': sum([int(e) for e in stat_field])}
     return stat_info
 
+
 def get_cpu_stat():
     stat_file = open('/proc/stat')
     stat_infos = dict()
