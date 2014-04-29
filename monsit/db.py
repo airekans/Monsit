@@ -2,7 +2,7 @@ import datetime
 
 import mysql.connector
 
-from monsit.proto import simple_pb2
+from monsit.proto import monsit_pb2
 
 
 _DB_CONFIG = {'host': '127.0.0.1',
@@ -214,7 +214,7 @@ class DBConnection(object):
                     cursor.execute(select_stmt)
                     cpu_infos = []
                     for stat in cursor:
-                        cpu_info = simple_pb2.CPUInfo(name=stat[1],
+                        cpu_info = monsit_pb2.CPUInfo(name=stat[1],
                                                       user_count=stat[2],
                                                       nice_count=stat[3],
                                                       sys_count=stat[4],
@@ -229,7 +229,7 @@ class DBConnection(object):
                     net_infos = []
                     try:
                         for stat in cursor:
-                            net_info = simple_pb2.NetInfo(name=stat[1],
+                            net_info = monsit_pb2.NetInfo(name=stat[1],
                                                           ip=stat[2],
                                                           recv_byte=stat[4],
                                                           send_byte=stat[5])

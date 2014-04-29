@@ -2,10 +2,10 @@ from gevent import monkey
 monkey.patch_all()
 
 from monsit import db, rpc
-from monsit.proto import simple_pb2
+from monsit.proto import monsit_pb2
 
 
-class MonsitServiceImpl(simple_pb2.MonsitService):
+class MonsitServiceImpl(monsit_pb2.MonsitService):
 
     def __init__(self):
         with db.DBConnection() as cnx:
@@ -24,14 +24,14 @@ class MonsitServiceImpl(simple_pb2.MonsitService):
                 host_info = cnx.insert_new_host(request.host_name)
                 self.__registered_hosts[request.host_name] = [host_info[0], True]
 
-        rsp = simple_pb2.RegisterResponse(return_code=0, msg='SUCCESS')
+        rsp = monsit_pb2.RegisterResponse(return_code=0, msg='SUCCESS')
         return rsp
 
     def Report(self, rpc_controller, request, done):
         if request.host_name not in self.__registered_hosts or \
            not self.__registered_hosts[request.host_name][1]:
             print 'Host not registered:', request.host_name
-            rsp = simple_pb2.SimpleResponse(return_code=1, msg='Host not registered')
+            rsp = monsit_pb2.SimpleResponse(return_code=1, msg='Host not registered')
             return rsp
 
         print request
@@ -43,7 +43,7 @@ class MonsitServiceImpl(simple_pb2.MonsitService):
                 if not cnx.insert_host_info(request, host_id):
                     print 'failed to store req in db'
 
-        rsp = simple_pb2.SimpleResponse(return_code=0, msg='SUCCESS')
+        rsp = monsit_pb2.SimpleResponse(return_code=0, msg='SUCCESS')
         return rsp
 
 

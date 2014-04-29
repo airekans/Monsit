@@ -6,17 +6,17 @@ import sys
 import gevent
 from monsit import cpu, rpc, net
 
-from monsit.proto import simple_pb2
+from monsit.proto import monsit_pb2
 
 
 def get_register_info():
-    reg_info = simple_pb2.RegisterRequest()
+    reg_info = monsit_pb2.RegisterRequest()
     reg_info.host_name = socket.gethostname()
     return reg_info
 
 
 def collect_machine_info():
-    machine_info = simple_pb2.SimpleRequest()
+    machine_info = monsit_pb2.SimpleRequest()
     machine_info.host_name = socket.gethostname()
 
     cpu_stats = cpu.get_cpu_stat()
@@ -48,7 +48,7 @@ def collect_thread(master_addr, interval):
     master_addr = (opts.master_ip, opts.master_port)
 
     tcp_channel = rpc.TcpChannel(master_addr)
-    stub = simple_pb2.MonsitService_Stub(tcp_channel)
+    stub = monsit_pb2.MonsitService_Stub(tcp_channel)
 
     # first register to the master
     req = get_register_info()
