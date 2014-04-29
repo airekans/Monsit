@@ -241,6 +241,6 @@ class DBConnection(object):
 
                     stats[field] = net_infos
 
-        print stats
+        #print stats
         return stats
 

@@ -309,11 +309,11 @@ class RpcServerTest(unittest.TestCase):
 
         t = gevent.spawn(self.server.handle_connection, socket, ('127.0.0.1', 34567))
         gevent.sleep(1)
-        socket.close()
-        t.join()
-
         actual_serialized_rsp = socket.get_send_content()
         self.assertEqual(serialized_rsp, actual_serialized_rsp)
+
+        socket.close()
+        t.join()
 
     def test_handle_connection_async(self):
         rsp = test_pb2.TestResponse(return_code=0, msg='SUCCESS')
