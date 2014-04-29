@@ -269,7 +269,11 @@ class RpcServer(object):
 
         def send_rsp():
             while not is_connection_closed[0]:
-                meta_info, rsp = rsp_queue.get()
+                try:
+                    meta_info, rsp = rsp_queue.get(timeout=1)
+                except gevent.queue.Empty:
+                    continue
+
                 serialized_rsp = _serialize_message(meta_info, rsp)
                 socket.send(serialized_rsp)
 
