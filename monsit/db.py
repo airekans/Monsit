@@ -11,7 +11,7 @@ _DB_CONFIG = {'host': '127.0.0.1',
               'database': 'monsit'}
 _POOL_SIZE = mysql.connector.pooling.CNX_POOL_MAXSIZE
 
-_VALID_FIELDS = ['cpu', 'net']
+_VALID_FIELDS = ['cpu', 'net', 'vmem', 'swap']
 
 
 class TableNames(object):
@@ -138,6 +138,30 @@ class DBConnection(object):
         ) % DBConnection.get_host_table_name(host_id, 'net')
         cursor.execute(net_table_stmt)
 
+        vmem_table_stmt = (
+            'CREATE TABLE IF NOT EXISTS `%s` ('
+            '  `id` int(11) NOT NULL AUTO_INCREMENT,'
+            '  `total` bigint NOT NULL,'
+            '  `available` bigint NOT NULL,'
+            '  `used` bigint NOT NULL,'
+            '  `percent` int(11) NOT NULL,'
+            '  PRIMARY KEY (`id`)'
+            ') ENGINE=InnoDB'
+        ) % DBConnection.get_host_table_name(host_id, 'vmem')
+        cursor.execute(vmem_table_stmt)
+
+        swap_table_stmt = (
+            'CREATE TABLE IF NOT EXISTS `%s` ('
+            '  `id` int(11) NOT NULL AUTO_INCREMENT,'
+            '  `total` bigint NOT NULL,'
+            '  `free` bigint NOT NULL,'
+            '  `used` bigint NOT NULL,'
+            '  `percent` int(11) NOT NULL,'
+            '  PRIMARY KEY (`id`)'
+            ') ENGINE=InnoDB'
+        ) % DBConnection.get_host_table_name(host_id, 'swap')
+        cursor.execute(swap_table_stmt)
+
         self.__cnx.commit()
 
     def insert_host_info(self, host_info, host_id):
@@ -147,6 +171,8 @@ class DBConnection(object):
         report_time = report_time.strftime("%Y-%m-%d %H:%M:%S")
         cpu_tbl_name = self.get_host_table_name(host_id, 'cpu')
         net_tbl_name = self.get_host_table_name(host_id, 'net')
+        vmem_tbl_name = self.get_host_table_name(host_id, 'vmem')
+        swap_tbl_name = self.get_host_table_name(host_id, 'swap')
 
         cpu_insert_stmt = (
             "INSERT INTO %s SET"
@@ -197,6 +223,38 @@ class DBConnection(object):
                 print err.msg
                 self.__cnx.rollback()
                 return False
+
+        vmem_info = host_info.mem_info.virtual_mem
+        vmem_insert_stmt = (
+            "INSERT INTO %s SET"
+            " total=%d,"
+            " available=%d,"
+            " used=%d,"
+            " percent=%d"
+        ) % (vmem_tbl_name, vmem_info.total, vmem_info.available,
+             vmem_info.used, vmem_info.percent)
+        try:
+            cursor.execute(vmem_insert_stmt)
+        except mysql.connector.Error as err:
+            print err.msg
+            self.__cnx.rollback()
+            return False
+
+        swap_info = host_info.mem_info.swap_mem
+        swap_insert_stmt = (
+            "INSERT INTO %s SET"
+            " total=%d,"
+            " free=%d,"
+            " used=%d,"
+            " percent=%d"
+        ) % (swap_tbl_name, swap_info.total, swap_info.free,
+             swap_info.used, swap_info.percent)
+        try:
+            cursor.execute(swap_insert_stmt)
+        except mysql.connector.Error as err:
+            print err.msg
+            self.__cnx.rollback()
+            return False
 
         self.__cnx.commit()
         return True
