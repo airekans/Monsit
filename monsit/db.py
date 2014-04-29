@@ -145,6 +145,7 @@ class DBConnection(object):
             '  `available` bigint NOT NULL,'
             '  `used` bigint NOT NULL,'
             '  `percent` int(11) NOT NULL,'
+            '  `datetime` datetime NOT NULL,'
             '  PRIMARY KEY (`id`)'
             ') ENGINE=InnoDB'
         ) % DBConnection.get_host_table_name(host_id, 'vmem')
@@ -157,6 +158,7 @@ class DBConnection(object):
             '  `free` bigint NOT NULL,'
             '  `used` bigint NOT NULL,'
             '  `percent` int(11) NOT NULL,'
+            '  `datetime` datetime NOT NULL,'
             '  PRIMARY KEY (`id`)'
             ') ENGINE=InnoDB'
         ) % DBConnection.get_host_table_name(host_id, 'swap')
@@ -230,9 +232,10 @@ class DBConnection(object):
             " total=%d,"
             " available=%d,"
             " used=%d,"
-            " percent=%d"
+            " percent=%d,"
+            " datetime='%s'"
         ) % (vmem_tbl_name, vmem_info.total, vmem_info.available,
-             vmem_info.used, vmem_info.percent)
+             vmem_info.used, vmem_info.percent, report_time)
         try:
             cursor.execute(vmem_insert_stmt)
         except mysql.connector.Error as err:
@@ -246,9 +249,10 @@ class DBConnection(object):
             " total=%d,"
             " free=%d,"
             " used=%d,"
-            " percent=%d"
+            " percent=%d,"
+            " datetime='%s'"
         ) % (swap_tbl_name, swap_info.total, swap_info.free,
-             swap_info.used, swap_info.percent)
+             swap_info.used, swap_info.percent, report_time)
         try:
             cursor.execute(swap_insert_stmt)
         except mysql.connector.Error as err:
@@ -298,6 +302,38 @@ class DBConnection(object):
                         raise
 
                     stats[field] = net_infos
+                elif field == 'vmem':
+                    cursor.execute(select_stmt)
+                    vmem_infos = []
+                    try:
+                        for stat in cursor:
+                            vmem_info = monsit_pb2.VirtualMemInfo(total=stat[1],
+                                                                  available=stat[2],
+                                                                  used=stat[3],
+                                                                  percent=stat[4])
+                            vmem_infos.append((stat[5], vmem_info))
+                    except:
+                        import traceback
+                        traceback.print_exc()
+                        raise
+
+                    stats[field] = vmem_infos
+                elif field == 'swap':
+                    cursor.execute(select_stmt)
+                    swap_infos = []
+                    try:
+                        for stat in cursor:
+                            swap_info = monsit_pb2.SwapMemInfo(total=stat[1],
+                                                               free=stat[2],
+                                                               used=stat[3],
+                                                               percent=stat[4])
+                            swap_infos.append((stat[5], swap_info))
+                    except:
+                        import traceback
+                        traceback.print_exc()
+                        raise
+
+                    stats[field] = swap_infos
 
         #print stats
         return stats

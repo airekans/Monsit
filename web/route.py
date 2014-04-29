@@ -98,6 +98,20 @@ def ajax_hostinfo():
                         get_net_flow_stat((date, net_info),
                                           last_net_stat.get(net_dev_name, None))
                     last_net_stat[net_dev_name] = (date, net_info)
+            elif field == 'vmem':
+                host_stats['vmem'] = {}
+                vmem_stat = host_stats['vmem']
+                vmem_stat['vmem'] = {}
+                for date, vmem_info in db_stats:
+                    stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
+                    vmem_stat['vmem'][stat_time] = vmem_info.percent
+            elif field == 'swap':
+                host_stats['swap'] = {}
+                swap_stat = host_stats['swap']
+                swap_stat['swap'] = {}
+                for date, swap_info in db_stats:
+                    stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
+                    swap_stat['swap'][stat_time] = swap_info.percent
 
     return jsonify(stats=host_stats)
 
