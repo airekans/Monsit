@@ -28,7 +28,8 @@ class FakeTcpSocket(object):
 
         if len(self.__recv_content) == 0:
             if not self.__is_client:
-                gevent.sleep(1)
+                while self.__is_connected:
+                    gevent.sleep(1)
             return ""
 
         buf = self.__recv_content[:size]
@@ -37,6 +38,7 @@ class FakeTcpSocket(object):
 
     def send(self, buf):
         self.__send_content += buf
+        return len(buf)
 
     def set_recv_content(self, recv_content):
         self.__recv_content = recv_content
@@ -221,7 +223,6 @@ class FakeTestService(test_pb2.TestService):
         self.rsp = rsp
 
     def TestMethod(self, rpc_controller, request, done):
-        print 'in TestMethod'
         if self.is_async:
             gevent.sleep(1)
 
@@ -303,13 +304,40 @@ class RpcServerTest(unittest.TestCase):
         serialized_rsp = self.get_serialize_message(1, self.service_descriptor,
                                                     self.method.name, rsp)
         socket = FakeTcpSocket(is_client=False)
+        socket.connect(('127.0.0.1', 34567))
         socket.set_recv_content(serialized_req)
 
-        self.server.handle_connection(socket, ('127.0.0.1', 34567))
+        t = gevent.spawn(self.server.handle_connection, socket, ('127.0.0.1', 34567))
         gevent.sleep(1)
+        socket.close()
+        t.join()
 
         actual_serialized_rsp = socket.get_send_content()
         self.assertEqual(serialized_rsp, actual_serialized_rsp)
+
+    def test_handle_connection_async(self):
+        rsp = test_pb2.TestResponse(return_code=0, msg='SUCCESS')
+        service = FakeTestService(True, rsp)
+        self.server.register_service(service)
+
+        req = test_pb2.TestRequest(name='abc', num=1)
+        serialized_req = self.get_serialize_message(1, self.service_descriptor,
+                                                    self.method.name, req)
+        serialized_rsp = self.get_serialize_message(1, self.service_descriptor,
+                                                    self.method.name, rsp)
+        socket = FakeTcpSocket(is_client=False)
+        socket.connect(('127.0.0.1', 34567))
+        socket.set_recv_content(serialized_req + serialized_req) # 2 requests
+
+        t = gevent.spawn(self.server.handle_connection, socket, ('127.0.0.1', 34567))
+        gevent.sleep(1)
+        self.assertEqual("", socket.get_send_content())
+        gevent.sleep(1)
+        socket.close()
+        t.join()
+
+        actual_serialized_rsp = socket.get_send_content()
+        self.assertEqual(serialized_rsp + serialized_rsp, actual_serialized_rsp)
 
 
 if __name__ == '__main__':

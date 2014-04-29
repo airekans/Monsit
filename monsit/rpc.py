@@ -7,6 +7,7 @@ import gevent.socket
 import gevent.queue
 import gevent.event
 import gevent
+from socket import error as soc_error
 
 from monsit.proto import rpc_meta_pb2
 
@@ -275,7 +276,13 @@ class RpcServer(object):
                     continue
 
                 serialized_rsp = _serialize_message(meta_info, rsp)
-                socket.send(serialized_rsp)
+                sent_bytes = 0
+                try:
+                    while sent_bytes < len(serialized_rsp):
+                        sent_bytes += socket.send(serialized_rsp[sent_bytes:])
+                except soc_error as e:
+                    print 'socket error', e
+                    break
 
         workers = [gevent.spawn(recv_req), gevent.spawn(send_rsp)]
         gevent.joinall(workers)
