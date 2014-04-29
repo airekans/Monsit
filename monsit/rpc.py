@@ -8,6 +8,7 @@ import gevent.queue
 import gevent.event
 import gevent
 from socket import error as soc_error
+import logging
 
 from monsit.proto import rpc_meta_pb2
 
@@ -57,7 +58,7 @@ def parse_meta(buf):
         meta_info.ParseFromString(meta_msg_buf)
         return meta_len, pb_msg_len, meta_info
     except message.DecodeError as err:
-        print 'parsing msg meta info failed: ' + str(err)
+        logging.warning('parsing msg meta info failed: ' + str(err))
         return None
 
 
@@ -67,7 +68,7 @@ def _parse_message(buf, msg_cls):
         msg.ParseFromString(buf)
         return msg
     except message.DecodeError as err:
-        print 'parsing msg failed: ' + str(err)
+        logging.warning('parsing msg failed: ' + str(err))
         return None
 
 
@@ -108,7 +109,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
 
                 recv_buf += buf
             except Exception, e:
-                print e
+                logging.warning('recv failed: ' + e)
                 break
 
         return recv_buf
@@ -147,24 +148,24 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         expected_size = 2 + struct.calcsize("!I")
         pb_buf = self._recv(expected_size)
         if len(pb_buf) == 0:
-            print 'socket has been closed'
+            logging.info('socket has been closed')
             return False
         if len(pb_buf) < expected_size:
-            print 'rsp buffer broken'
+            logging.warning('rsp buffer broken')
             return True
         if pb_buf[:2] != 'PB':
-            print 'rsp buffer not begin with PB'
+            logging.warning('rsp buffer not begin with PB')
             return True
 
         buf_size = struct.unpack("!I", pb_buf[2:])[0]
         pb_buf = self._recv(buf_size)
         if len(pb_buf) == 0:
-            print 'socket has been closed'
+            logging.info('socket has been closed')
             return False
 
         result = parse_meta(pb_buf)
         if result is None:
-            print 'pb decode error, skip this message'
+            logging.warning('pb decode error, skip this message')
             return True
 
         meta_len, pb_msg_len, meta_info = result
@@ -175,14 +176,15 @@ class TcpChannel(google.protobuf.service.RpcChannel):
 
             if meta_info.flow_id != expected_meta.flow_id:
                 rpc_controller.SetFailed('rsp flow id not match')
-                print 'rsp flow id not match:', expected_meta.flow_id, meta_info.flow_id
+                logging.warning('rsp flow id not match: %d %d' % (expected_meta.flow_id,
+                                                                  meta_info.flow_id))
                 done(None)
                 return True
             elif meta_info.service_name != expected_meta.service_name or \
                             meta_info.method_name != expected_meta.method_name or \
                             meta_info.msg_name != response_class.DESCRIPTOR.full_name:
                 rpc_controller.SetFailed('rsp meta not match')
-                print 'rsp meta not match'
+                logging.warning('rsp meta not match')
                 done(None)
                 return True
 
@@ -192,7 +194,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
             done(rsp)
             return True
         else:
-            print 'flow id not found:', meta_info.flow_id
+            logging.warning('flow id not found:', meta_info.flow_id)
             return True
 
     # when done is None, it means the method call is synchronous
@@ -235,7 +237,7 @@ class RpcServer(object):
                     if len(recv_buf) == 0:
                         break
                 except Exception, e:
-                    print e
+                    logging.warning('recv_req error: ' + e)
                     break
 
                 content += recv_buf
@@ -257,7 +259,7 @@ class RpcServer(object):
                     cur_index += buf_size + 6
                     result = self.parse_message(pb_buf)
                     if result is None:
-                        print 'pb decode error, skip this message'
+                        logging.warning('pb decode error, skip this message')
                         break
 
                     gevent.spawn(lambda: call_service(result))
@@ -265,7 +267,7 @@ class RpcServer(object):
                 if cur_index > 0:
                     content = content[cur_index:]
 
-            print addr, 'has disconnected'
+            logging.info(str(addr) + 'has disconnected')
             is_connection_closed[0] = True
 
         def send_rsp():
@@ -281,7 +283,7 @@ class RpcServer(object):
                     while sent_bytes < len(serialized_rsp):
                         sent_bytes += socket.send(serialized_rsp[sent_bytes:])
                 except soc_error as e:
-                    print 'socket error', e
+                    logging.warning('socket error: ' + e)
                     break
 
         workers = [gevent.spawn(recv_req), gevent.spawn(send_rsp)]
@@ -297,12 +299,12 @@ class RpcServer(object):
         try:
             service = self._services[meta_info.service_name]
         except KeyError:
-            print 'cannot find the service', meta_info.service_name
+            logging.warning('cannot find the service: ' + meta_info.service_name)
             return None
 
         method = service.GetDescriptor().FindMethodByName(meta_info.method_name)
         if method is None:
-            print 'cannot find the method', meta_info.method_name
+            logging.warning('cannot find the method: ' + meta_info.method_name)
             return None
 
         msg = _parse_message(buf[8 + meta_len:8 + meta_len + pb_msg_len],
