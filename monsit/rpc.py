@@ -72,10 +72,8 @@ def _parse_message(buf, msg_cls):
         return None
 
 
-class TcpChannel(google.protobuf.service.RpcChannel):
+class TcpConnection(object):
     def __init__(self, addr, socket_cls=gevent.socket.socket):
-        google.protobuf.service.RpcChannel.__init__(self)
-        self._flow_id = 0
         self._addr = addr
         self._socket = socket_cls()
         self.connect()
@@ -84,20 +82,45 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         self._recv_infos = {}
         self._workers = [gevent.spawn(self.send_loop), gevent.spawn(self.recv_loop)]
 
-    def __del__(self):
-        self.close()
-
-    def _get_flow_id(self):
-        flow_id = self._flow_id
-        self._flow_id += 1
-        return flow_id
-
     def connect(self):
         self._socket.connect(self._addr)
 
     def close(self):
         self._socket.close()
         gevent.killall(self._workers)
+
+    def add_send_task(self, flow_id, method_descriptor, rpc_controller,
+                      request, response_class, done):
+        self._send_task_queue.put_nowait(
+            lambda: self.send_req(flow_id, method_descriptor, rpc_controller,
+                                  request, response_class, done))
+
+    def recv_loop(self):
+        while True:
+            if not self.recv_rsp():
+                break
+
+        # check if there is any request has not been processed.
+        for v in self._recv_infos.itervalues():
+            expected_meta, rpc_controller, response_class, done = v
+            rpc_controller.SetFailed('channel has been closed prematurely')
+            done(None)
+
+    def send_loop(self):
+        while True:
+            send_task = self._send_task_queue.get()
+            send_task()
+
+    def send_req(self, flow_id, method_descriptor, rpc_controller,
+                 request, response_class, done):
+        service_descriptor = method_descriptor.containing_service
+        meta_info = rpc_meta_pb2.MetaInfo()
+        meta_info.flow_id = flow_id
+        meta_info.service_name = service_descriptor.full_name
+        meta_info.method_name = method_descriptor.name
+        serialized_req = _serialize_message(meta_info, request)
+        self._socket.send(serialized_req)
+        self._recv_infos[flow_id] = meta_info, rpc_controller, response_class, done
 
     def _recv(self, expected_size):
         recv_buf = ''
@@ -114,38 +137,12 @@ class TcpChannel(google.protobuf.service.RpcChannel):
 
         return recv_buf
 
-    def recv_loop(self):
-        expected_size = 2 + struct.calcsize("!I")
-        while True:
-            if not self.recv_rsp():
-                break
-
-        # check if there is any request has not been processed.
-        for v in self._recv_infos.itervalues():
-            expected_meta, rpc_controller, response_class, done = v
-            rpc_controller.SetFailed('channel has been closed prematurely')
-            done(None)
-
-    def send_loop(self):
-        while True:
-            send_task = self._send_task_queue.get()
-            send_task()
-
-    def send_req(self, method_descriptor, rpc_controller, request, response_class, done):
-        service_descriptor = method_descriptor.containing_service
-        flow_id = self._get_flow_id()
-        meta_info = rpc_meta_pb2.MetaInfo()
-        meta_info.flow_id = flow_id
-        meta_info.service_name = service_descriptor.full_name
-        meta_info.method_name = method_descriptor.name
-        serialized_req = _serialize_message(meta_info, request)
-        self._socket.send(serialized_req)
-        self._recv_infos[flow_id] = meta_info, rpc_controller, response_class, done
+    _expected_size = 2 + struct.calcsize("!I")
 
     # return True when the connection is not closed
     # return False when it's closed
     def recv_rsp(self):
-        expected_size = 2 + struct.calcsize("!I")
+        expected_size = TcpConnection._expected_size
         pb_buf = self._recv(expected_size)
         if len(pb_buf) == 0:
             logging.info('socket has been closed')
@@ -197,19 +194,39 @@ class TcpChannel(google.protobuf.service.RpcChannel):
             logging.warning('flow id not found:', meta_info.flow_id)
             return True
 
+
+class TcpChannel(google.protobuf.service.RpcChannel):
+    def __init__(self, addr, conn_class=TcpConnection):
+        google.protobuf.service.RpcChannel.__init__(self)
+        self._flow_id = 0
+        self._addr = addr
+        self._connection = conn_class(addr)
+
+    def __del__(self):
+        self.close()
+
+    def _get_flow_id(self):
+        flow_id = self._flow_id
+        self._flow_id += 1
+        return flow_id
+
+    def close(self):
+        self._connection.close()
+
     # when done is None, it means the method call is synchronous
     # when it's not None, it means the call is asynchronous
     def CallMethod(self, method_descriptor, rpc_controller,
                    request, response_class, done):
+        flow_id = self._get_flow_id()
         if done is None:
             res = gevent.event.AsyncResult()
             done = lambda rsp: res.set(rsp)
-            self._send_task_queue.put_nowait(lambda: self.send_req(method_descriptor, rpc_controller,
-                                                                   request, response_class, done))
+            self._connection.add_send_task(flow_id, method_descriptor, rpc_controller,
+                                           request, response_class, done)
             return res.get()
         else:
-            self._send_task_queue.put_nowait(lambda: self.send_req(method_descriptor, rpc_controller,
-                                                                   request, response_class, done))
+            self._connection.add_send_task(flow_id, method_descriptor, rpc_controller,
+                                           request, response_class, done)
             return None
 
 

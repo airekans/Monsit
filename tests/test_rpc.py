@@ -47,14 +47,24 @@ class FakeTcpSocket(object):
         return self.__send_content
 
 
-class FakeTcpChannel(rpc.TcpChannel):
-
+class FakeTcpConnection(rpc.TcpConnection):
     def __init__(self, addr, recv_content):
-        rpc.TcpChannel.__init__(self, addr, FakeTcpSocket)
-        self._socket.set_recv_content(recv_content)
+        rpc.TcpConnection.__init__(self, addr, FakeTcpSocket)
 
     def get_socket(self):
         return self._socket
+
+
+class FakeTcpChannel(rpc.TcpChannel):
+
+    def __init__(self, addr, recv_content):
+        rpc.TcpChannel.__init__(self, addr,
+                                lambda ad: FakeTcpConnection(ad, recv_content))
+        self.socket = self._connection.get_socket()
+        self.socket.set_recv_content(recv_content)
+
+    def get_socket(self):
+        return self.socket
 
     def get_flow_id(self):
         return self._flow_id
