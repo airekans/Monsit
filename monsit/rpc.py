@@ -217,6 +217,10 @@ class RpcClient(object):
     def __init__(self):
         self._channels = {}
 
+    def __del__(self):
+        for channel in self._channels.itervalues():
+            channel.close()
+
     def get_tcp_channel(self, addr):
         if addr not in self._channels:
             channel = TcpChannel(addr)
