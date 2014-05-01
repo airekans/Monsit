@@ -213,6 +213,20 @@ class TcpChannel(google.protobuf.service.RpcChannel):
             return None
 
 
+class RpcClient(object):
+    def __init__(self):
+        self._channels = {}
+
+    def get_tcp_channel(self, addr):
+        if addr not in self._channels:
+            channel = TcpChannel(addr)
+            self._channels[addr] = channel
+        else:
+            channel = self._channels[addr]
+
+        return channel
+
+
 class RpcServer(object):
     def __init__(self, addr):
         self._addr = addr

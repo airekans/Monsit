@@ -58,7 +58,8 @@ def collect_thread(master_addr, interval):
     opts, args = optparser.parse_args()
     master_addr = (opts.master_ip, opts.master_port)
 
-    tcp_channel = rpc.TcpChannel(master_addr)
+    rpc_client = rpc.RpcClient()
+    tcp_channel = rpc_client.get_tcp_channel(master_addr)
     stub = monsit_pb2.MonsitService_Stub(tcp_channel)
 
     # first register to the master
@@ -88,7 +89,7 @@ if __name__ == '__main__':
     opts, args = optparser.parse_args()
     master_addr = (opts.master_ip, opts.master_port)
 
-    job = gevent.spawn(lambda: collect_thread(master_addr, 30))
+    job = gevent.spawn(collect_thread, master_addr, 30)
 
     try:
         job.join()
