@@ -271,6 +271,8 @@ class RpcClient(object):
             channel.close()
 
     def get_tcp_channel(self, addr):
+        if isinstance(addr, list):
+            addr = tuple(addr)
         if addr not in self._channels:
             channel = TcpChannel(addr)
             self._channels[addr] = channel
