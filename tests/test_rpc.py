@@ -60,7 +60,8 @@ class FakeTcpChannel(rpc.TcpChannel):
     def __init__(self, addr, recv_content):
         rpc.TcpChannel.__init__(self, addr,
                                 lambda ad: FakeTcpConnection(ad, recv_content))
-        self.socket = self._connection.get_socket()
+        assert len(self._connections) == 1
+        self.socket = self._connections[0].get_socket()
         self.socket.set_recv_content(recv_content)
 
     def get_socket(self):
@@ -73,7 +74,7 @@ class FakeTcpChannel(rpc.TcpChannel):
 class TcpChannelTest(unittest.TestCase):
 
     def setUp(self):
-        self.channel = FakeTcpChannel(('127.0.0.1', 11111), "")
+        self.channel = FakeTcpChannel('127.0.0.1:11111', "")
         self.assertTrue(self.channel.get_socket().is_connected())
 
         self.service_stub = test_pb2.TestService_Stub(self.channel)

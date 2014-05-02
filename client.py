@@ -55,9 +55,6 @@ def collect_machine_info():
 
 
 def collect_thread(master_addr, interval):
-    opts, args = optparser.parse_args()
-    master_addr = (opts.master_ip, opts.master_port)
-
     rpc_client = rpc.RpcClient()
     tcp_channel = rpc_client.get_tcp_channel(master_addr)
     stub = monsit_pb2.MonsitService_Stub(tcp_channel)
@@ -78,16 +75,15 @@ def collect_thread(master_addr, interval):
         gevent.sleep(interval)
 
 
-if __name__ == '__main__':
+def main():
     optparser = optparse.OptionParser(usage = "%prog [options]")
     optparser.add_option('--master-ip', dest="master_ip",
                          help="IP of the master", default="127.0.0.1")
     optparser.add_option('--master-port', dest="master_port",
-                         help="Port of the master", type="int",
-                         default=30002)
+                         help="Port of the master", default='30002')
 
     opts, args = optparser.parse_args()
-    master_addr = (opts.master_ip, opts.master_port)
+    master_addr = opts.master_ip + ':' + opts.master_port
 
     job = gevent.spawn(collect_thread, master_addr, 30)
 
@@ -95,3 +91,7 @@ if __name__ == '__main__':
         job.join()
     except KeyboardInterrupt:
         print 'monsit agent got SIGINT, exit.'
+
+
+if __name__ == '__main__':
+    main()

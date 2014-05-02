@@ -200,7 +200,9 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         google.protobuf.service.RpcChannel.__init__(self)
         self._flow_id = 0
         self._addr = addr
-        self._connection = conn_class(addr)
+        self._connections = []
+        for ip_port in self.resolve_addr(addr):
+            self._connections.append(conn_class(ip_port))
 
     def __del__(self):
         self.close()
@@ -211,21 +213,51 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         return flow_id
 
     def close(self):
-        self._connection.close()
+        for conn in self._connections:
+            conn.close()
+
+    def resolve_addr(self, addr):
+        if isinstance(addr, (list, set, tuple)):
+            ip_ports = []
+            for ad in addr:
+                ip_ports += self.resolve_addr(ad)
+            return ip_ports
+        elif isinstance(addr, str):
+            sep_index = addr.find('/')
+            if sep_index == -1:  # cannot find '/', so treat it as ip port
+                ip, port = addr.split(':')
+                port = int(port)
+                return [(ip, port)]
+            else:
+                addr_type = addr[:sep_index]
+                addr_str = addr[sep_index + 1:]
+                if addr_type == 'ip':
+                    ip, port = addr_str.split(':')
+                    port = int(port)
+                    return [(ip, port)]
+                elif addr_type == 'zk':
+                    raise NotImplementedError
+                else:
+                    raise NotImplementedError
 
     # when done is None, it means the method call is synchronous
     # when it's not None, it means the call is asynchronous
     def CallMethod(self, method_descriptor, rpc_controller,
                    request, response_class, done):
         flow_id = self._get_flow_id()
+        if len(self._connections) == 1:
+            conn = self._connections[0]
+        else:
+            conn = self._connections[flow_id % len(self._connections)]
+
         if done is None:
             res = gevent.event.AsyncResult()
             done = lambda rsp: res.set(rsp)
-            self._connection.add_send_task(flow_id, method_descriptor, rpc_controller,
+            conn.add_send_task(flow_id, method_descriptor, rpc_controller,
                                            request, response_class, done)
             return res.get()
         else:
-            self._connection.add_send_task(flow_id, method_descriptor, rpc_controller,
+            conn.add_send_task(flow_id, method_descriptor, rpc_controller,
                                            request, response_class, done)
             return None
 
@@ -250,9 +282,13 @@ class RpcClient(object):
 
 class RpcServer(object):
     def __init__(self, addr):
-        self._addr = addr
+        if isinstance(addr, str):
+            self._addr = addr.split(':')  # addr string like '127.0.0.1:30006'
+        else:
+            self._addr = addr
         self._services = {}
-        self._stream_server = gevent.server.StreamServer(addr, self._handle_connection)
+        self._stream_server = gevent.server.StreamServer(self._addr,
+                                                         self._handle_connection)
 
     def _handle_connection(self, socket, addr):
         rsp_queue = gevent.queue.Queue()
