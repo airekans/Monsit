@@ -254,15 +254,18 @@ class TcpChannel(google.protobuf.service.RpcChannel):
             res = gevent.event.AsyncResult()
             done = lambda rsp: res.set(rsp)
             conn.add_send_task(flow_id, method_descriptor, rpc_controller,
-                                           request, response_class, done)
+                               request, response_class, done)
             return res.get()
         else:
             conn.add_send_task(flow_id, method_descriptor, rpc_controller,
-                                           request, response_class, done)
+                               request, response_class, done)
             return None
 
 
 class RpcClient(object):
+
+    tcp_channel_class = TcpChannel
+
     def __init__(self):
         self._channels = {}
 
@@ -274,7 +277,7 @@ class RpcClient(object):
         if isinstance(addr, list):
             addr = tuple(addr)
         if addr not in self._channels:
-            channel = TcpChannel(addr)
+            channel = RpcClient.tcp_channel_class(addr)
             self._channels[addr] = channel
         else:
             channel = self._channels[addr]

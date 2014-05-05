@@ -57,12 +57,15 @@ class FakeTcpConnection(rpc.TcpConnection):
 
 class FakeTcpChannel(rpc.TcpChannel):
 
-    def __init__(self, addr, recv_content):
+    def __init__(self, addr, recv_content=''):
         rpc.TcpChannel.__init__(self, addr,
                                 lambda ad: FakeTcpConnection(ad, recv_content))
-        assert len(self._connections) == 1
         self.socket = self._connections[0].get_socket()
-        self.socket.set_recv_content(recv_content)
+        if recv_content:
+            self.socket.set_recv_content(recv_content)
+
+    def get_connections(self):
+        return self._connections
 
     def get_socket(self):
         return self.socket
@@ -209,6 +212,25 @@ class TcpChannelTest(unittest.TestCase):
         self.assertEqual(1, channel.get_flow_id())
         self.assertEqual(1, len(actual_rsp))
         self.assertEqual(rsp, actual_rsp[0], str(actual_rsp))
+
+
+class RpcClientTest(unittest.TestCase):
+
+    def setUp(self):
+        rpc.RpcClient.tcp_channel_class = FakeTcpChannel
+        self.client = rpc.RpcClient()
+
+    def test_get_tcp_channel_with_one_ip(self):
+        test_addr = '127.0.0.1:30002'
+        channel1 = self.client.get_tcp_channel(test_addr)
+        channel2 = self.client.get_tcp_channel(test_addr)
+        self.assertIs(channel1, channel2)
+
+    def test_get_tcp_channel_with_multiple_ips(self):
+        test_addrs = ('127.0.0.1:30002', '192.168.1.12:30003')
+        channel1 = self.client.get_tcp_channel(test_addrs)
+        channel2 = self.client.get_tcp_channel(test_addrs)
+        self.assertIs(channel1, channel2)
 
 
 class FakeRpcServer(rpc.RpcServer):
