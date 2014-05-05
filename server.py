@@ -54,6 +54,6 @@ if __name__ == '__main__':
     rpc_server = rpc.RpcServer(('0.0.0.0', 30002))
     rpc_server.register_service(service)
     try:
-        rpc_server.run()
+        rpc_server.run(print_stat_interval=60)
     except KeyboardInterrupt:
         print 'monsit got SIGINT, exit.'
