@@ -220,12 +220,19 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         if isinstance(addr, (list, set, tuple)):
             ip_ports = []
             for ad in addr:
-                ip_ports += self.resolve_addr(ad)
+                ads = self.resolve_addr(ad)
+                if ads is None:
+                    return None
+                ip_ports += ads
             return ip_ports
         elif isinstance(addr, str):
             sep_index = addr.find('/')
             if sep_index == -1:  # cannot find '/', so treat it as ip port
-                ip, port = addr.split(':')
+                try:
+                    ip, port = addr.split(':')
+                except ValueError:
+                    return None
+
                 port = int(port)
                 return [(ip, port)]
             else:

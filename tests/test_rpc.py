@@ -213,6 +213,28 @@ class TcpChannelTest(unittest.TestCase):
         self.assertEqual(1, len(actual_rsp))
         self.assertEqual(rsp, actual_rsp[0], str(actual_rsp))
 
+    def test_resolve_addr_with_single_addr(self):
+        expected_addrs = [('127.0.0.1', 30012)]
+        addrs = self.channel.resolve_addr('127.0.0.1:30012')
+        self.assertEqual(expected_addrs, addrs)
+
+        addrs = self.channel.resolve_addr('ip/127.0.0.1:30012')
+        self.assertEqual(expected_addrs, addrs)
+
+    def test_resolve_addr_with_multiple_addrs(self):
+        expected_addrs = [('127.0.0.1', 30012), ('192.168.1.1', 30021)]
+        addrs = self.channel.resolve_addr(['127.0.0.1:30012',
+                                           '192.168.1.1:30021'])
+        self.assertEqual(expected_addrs, addrs)
+
+        addrs = self.channel.resolve_addr(['ip/127.0.0.1:30012',
+                                           'ip/192.168.1.1:30021'])
+        self.assertEqual(expected_addrs, addrs)
+
+    def test_resolve_addr_with_wrong_addr(self):
+        addrs = self.channel.resolve_addr('127.0.0.1')
+        self.assertIsNone(addrs)
+
 
 class RpcClientTest(unittest.TestCase):
 
