@@ -119,7 +119,14 @@ class TcpConnection(object):
         meta_info.service_name = service_descriptor.full_name
         meta_info.method_name = method_descriptor.name
         serialized_req = _serialize_message(meta_info, request)
-        self._socket.send(serialized_req)
+        sent_bytes = 0
+        try:
+            while sent_bytes < len(serialized_req):
+                sent_bytes += self._socket.send(serialized_req[sent_bytes:])
+        except soc_error as e:
+            logging.warning('socket error: ' + e)
+            return
+
         self._recv_infos[flow_id] = meta_info, rpc_controller, response_class, done
 
     def _recv(self, expected_size):
@@ -386,7 +393,7 @@ class RpcServer(object):
                     if len(recv_buf) == 0:
                         break
                 except Exception, e:
-                    logging.warning('recv_req error: ' + e)
+                    logging.warning('recv_req error: ' + str(e))
                     break
 
                 content += recv_buf
