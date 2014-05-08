@@ -84,6 +84,8 @@ class TcpConnection(object):
 
     def connect(self):
         self._socket.connect(self._addr)
+        self._socket.setsockopt(gevent.socket.SOL_TCP, gevent.socket.TCP_NODELAY, 1)
+        self._socket.setsockopt(gevent.socket.IPPROTO_TCP, gevent.socket.TCP_NODELAY, 1)
 
     def close(self):
         self._socket.close()
@@ -373,6 +375,9 @@ class RpcServer(object):
                                                          self._handle_connection)
 
     def _handle_connection(self, socket, addr):
+        socket.setsockopt(gevent.socket.SOL_TCP, gevent.socket.TCP_NODELAY, 1)
+        socket.setsockopt(gevent.socket.IPPROTO_TCP, gevent.socket.TCP_NODELAY, 1)
+
         rsp_queue = gevent.queue.Queue()
         is_connection_closed = [False]
 

@@ -18,6 +18,9 @@ class FakeTcpSocket(object):
     def close(self):
         self.__is_connected = False
 
+    def setsockopt(self, *args):
+        pass
+
     def is_connected(self):
         return self.__is_connected
 
@@ -260,6 +263,7 @@ class FakeRpcServer(rpc.RpcServer):
     def __init__(self):
         self._addr = ('127.0.0.1', 12345)
         self._services = {}
+        self._stat = rpc.RpcServerStat()
         # not calling parent's __init__ to bypass the StreamServer init
 
     def get_service(self, name):
