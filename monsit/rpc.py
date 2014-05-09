@@ -122,7 +122,7 @@ class TcpConnection(object):
             expected_meta, rpc_controller, response_class, done = v
             rpc_controller.SetFailed((RpcController.SERVER_CLOSE_CONN_ERROR,
                                       'channel has been closed prematurely'))
-            done(None)
+            done(rpc_controller, None)
 
     def send_loop(self):
         while True:
@@ -223,13 +223,13 @@ class TcpConnection(object):
                     raise TcpConnection.Exception(rsp.err_code, rsp.err_msg)
 
                 del self._recv_infos[meta_info.flow_id]
-                done(rsp)
+                done(rpc_controller, rsp)
                 return True
             except TcpConnection.Exception as e:
                 rpc_controller.SetFailed((e.err_code, e.err_msg))
                 logging.warning(e.err_msg)
                 del self._recv_infos[meta_info.flow_id]
-                done(None)
+                done(rpc_controller, None)
                 return True
         else:
             logging.warning('flow id not found:', meta_info.flow_id)
@@ -300,7 +300,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
 
         if done is None:
             res = gevent.event.AsyncResult()
-            done = lambda rsp: res.set(rsp)
+            done = lambda _, rsp: res.set(rsp)
             conn.add_send_task(flow_id, method_descriptor, rpc_controller,
                                request, response_class, done)
             return res.get()

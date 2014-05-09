@@ -232,7 +232,7 @@ class TcpChannelTest(unittest.TestCase):
 
         controller = rpc.RpcController()
         actual_rsp = []
-        done = lambda rsp: actual_rsp.append(rsp)
+        done = lambda ctrl, rsp: actual_rsp.append(rsp)
         result = channel.CallMethod(self.method, controller,
                                     self.request, self.response_class, done)
         self.assertIsNone(result)
@@ -243,6 +243,7 @@ class TcpChannelTest(unittest.TestCase):
         self.assertEqual(1, channel.get_flow_id())
         self.assertEqual(1, len(actual_rsp))
         self.assertEqual(rsp, actual_rsp[0], str(actual_rsp))
+        self.assertFalse(controller.Failed())
 
     def test_resolve_addr_with_single_addr(self):
         expected_addrs = [('127.0.0.1', 30012)]

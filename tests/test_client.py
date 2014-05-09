@@ -28,8 +28,9 @@ def main():
     sent_req_num = 0
     recv_rsp_num = [0]
 
-    def done(rsp):
-        recv_rsp_num[0] += 1
+    def done(_, rsp):
+        if rsp:
+            recv_rsp_num[0] += 1
 
     while True:
         event.wait()
