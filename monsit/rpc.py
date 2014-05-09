@@ -14,20 +14,30 @@ from monsit.proto import rpc_meta_pb2
 
 
 class RpcController(google.protobuf.service.RpcController):
+    SUCCESS = 0
+    SERVER_SERVICE_ERROR = 1
+    SERVICE_TIMEOUT = 40
+    WRONG_FLOW_ID_ERROR = 50
+    WRONG_RSP_META_ERROR = 51
+    WRONG_MSG_NAME_ERROR = 52
+    SERVER_CLOSE_CONN_ERROR = 53
+
     def __init__(self):
-        self.error = None
+        self.err_code = RpcController.SUCCESS
+        self.err_msg = None
 
     def Reset(self):
-        self.error = None
+        self.err_code = RpcController.SUCCESS
+        self.err_msg = None
 
     def Failed(self):
-        return self.error is not None
+        return self.err_code != RpcController.SUCCESS
 
     def ErrorText(self):
-        return self.error
+        return self.err_msg
 
     def SetFailed(self, reason):
-        self.error = reason
+        self.err_code, self.err_msg = reason
 
 
 def _serialize_message(meta_info, msg):
@@ -105,7 +115,8 @@ class TcpConnection(object):
         # check if there is any request has not been processed.
         for v in self._recv_infos.itervalues():
             expected_meta, rpc_controller, response_class, done = v
-            rpc_controller.SetFailed('channel has been closed prematurely')
+            rpc_controller.SetFailed((RpcController.SERVER_CLOSE_CONN_ERROR,
+                                      'channel has been closed prematurely'))
             done(None)
 
     def send_loop(self):
@@ -147,6 +158,7 @@ class TcpConnection(object):
         return recv_buf
 
     _expected_size = 2 + struct.calcsize("!I")
+    _error_msg_name = rpc_meta_pb2.ErrorResponse.DESCRIPTOR.full_name
 
     # return True when the connection is not closed
     # return False when it's closed
@@ -181,23 +193,44 @@ class TcpConnection(object):
                 self._recv_infos[meta_info.flow_id]
 
             if meta_info.flow_id != expected_meta.flow_id:
-                rpc_controller.SetFailed('rsp flow id not match')
-                logging.warning('rsp flow id not match: %d %d' % (expected_meta.flow_id,
-                                                                  meta_info.flow_id))
+                err_msg = 'rsp flow id not match: %d %d' % (expected_meta.flow_id,
+                                                            meta_info.flow_id)
+                rpc_controller.SetFailed((RpcController.WRONG_FLOW_ID_ERROR, err_msg))
+                logging.warning(err_msg)
                 done(None)
                 return True
             elif meta_info.service_name != expected_meta.service_name or \
-                            meta_info.method_name != expected_meta.method_name or \
-                            meta_info.msg_name != response_class.DESCRIPTOR.full_name:
-                rpc_controller.SetFailed('rsp meta not match')
-                logging.warning('rsp meta not match')
+                            meta_info.method_name != expected_meta.method_name:
+                err_msg = 'rsp meta not match'
+                rpc_controller.SetFailed((RpcController.WRONG_RSP_META_ERROR, err_msg))
+                logging.warning(err_msg)
+                done(None)
+                return True
+            elif meta_info.HasField('has_error'):
+                if meta_info.msg_name != TcpConnection._error_msg_name:
+                    err_msg = 'rsp meta has error, but with wrong msg name'
+                    rpc_controller.SetFailed((RpcController.WRONG_MSG_NAME_ERROR,
+                                              err_msg))
+                    logging.warning(err_msg)
+                    done(None)
+                    return True
+                else:
+                    response_class = rpc_meta_pb2.ErrorResponse
+            elif meta_info.msg_name != response_class.DESCRIPTOR.full_name:
+                err_msg = 'wrong response class'
+                rpc_controller.SetFailed((RpcController.WRONG_MSG_NAME_ERROR, err_msg))
+                logging.warning(err_msg)
                 done(None)
                 return True
 
             rsp = _parse_message(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
                                  response_class)
             del self._recv_infos[meta_info.flow_id]
-            done(rsp)
+            if meta_info.HasField('has_error'):
+                rpc_controller.SetFailed((rsp.err_code, rsp.err_msg))
+                done(None)
+            else:
+                done(rsp)
             return True
         else:
             logging.warning('flow id not found:', meta_info.flow_id)
@@ -387,7 +420,13 @@ class RpcServer(object):
                                        meta_info.method_name, 1)
 
             controller = RpcController()
-            rsp = service.CallMethod(method, controller, req, None)
+            try:
+                rsp = service.CallMethod(method, controller, req, None)
+            except:
+                meta_info.has_error = True
+                rsp = rpc_meta_pb2.ErrorResponse(err_code=rpc_meta_pb2.SERVER_SERVICE_ERROR,
+                                                 err_msg='Error calling service')
+
             rsp_queue.put_nowait((meta_info, rsp))
 
         def recv_req():
@@ -444,7 +483,7 @@ class RpcServer(object):
                     while sent_bytes < len(serialized_rsp):
                         sent_bytes += socket.send(serialized_rsp[sent_bytes:])
                 except soc_error as e:
-                    logging.warning('socket error: ' + e)
+                    logging.warning('socket error: ' + str(e))
                     break
 
         workers = [gevent.spawn(recv_req), gevent.spawn(send_rsp)]

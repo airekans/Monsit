@@ -1,12 +1,19 @@
 package rpc;
 
+enum ErrorCode {
+  SUCCESS = 0;
+  SERVER_SERVICE_ERROR = 1;
+}
+
 message MetaInfo {
     required int32 flow_id = 1;
     required string service_name = 2;
     required string method_name = 3;
     required string msg_name = 4;
+    optional bool has_error = 30;
 }
 
 message ErrorResponse {
-    required string error = 1;
+    required int32 err_code = 1;
+    required string err_msg = 2;
 }
