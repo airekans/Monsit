@@ -83,6 +83,11 @@ def _parse_message(buf, msg_cls):
 
 
 class TcpConnection(object):
+
+    class Exception(Exception):
+        def __init__(self, err_code, err_msg):
+            self.err_code, self.err_msg = err_code, err_msg
+
     def __init__(self, addr, socket_cls=gevent.socket.socket):
         self._addr = addr
         self._socket = socket_cls()
@@ -192,46 +197,40 @@ class TcpConnection(object):
             expected_meta, rpc_controller, response_class, done = \
                 self._recv_infos[meta_info.flow_id]
 
-            if meta_info.flow_id != expected_meta.flow_id:
-                err_msg = 'rsp flow id not match: %d %d' % (expected_meta.flow_id,
-                                                            meta_info.flow_id)
-                rpc_controller.SetFailed((RpcController.WRONG_FLOW_ID_ERROR, err_msg))
-                logging.warning(err_msg)
-                done(None)
-                return True
-            elif meta_info.service_name != expected_meta.service_name or \
-                            meta_info.method_name != expected_meta.method_name:
-                err_msg = 'rsp meta not match'
-                rpc_controller.SetFailed((RpcController.WRONG_RSP_META_ERROR, err_msg))
-                logging.warning(err_msg)
-                done(None)
-                return True
-            elif meta_info.HasField('has_error'):
-                if meta_info.msg_name != TcpConnection._error_msg_name:
-                    err_msg = 'rsp meta has error, but with wrong msg name'
-                    rpc_controller.SetFailed((RpcController.WRONG_MSG_NAME_ERROR,
-                                              err_msg))
-                    logging.warning(err_msg)
-                    done(None)
-                    return True
-                else:
-                    response_class = rpc_meta_pb2.ErrorResponse
-            elif meta_info.msg_name != response_class.DESCRIPTOR.full_name:
-                err_msg = 'wrong response class'
-                rpc_controller.SetFailed((RpcController.WRONG_MSG_NAME_ERROR, err_msg))
-                logging.warning(err_msg)
-                done(None)
-                return True
+            try:
+                if meta_info.flow_id != expected_meta.flow_id:
+                    err_msg = 'rsp flow id not match: %d %d' % (expected_meta.flow_id,
+                                                                meta_info.flow_id)
+                    raise TcpConnection.Exception(RpcController.WRONG_FLOW_ID_ERROR, err_msg)
+                elif meta_info.service_name != expected_meta.service_name or \
+                                meta_info.method_name != expected_meta.method_name:
+                    err_msg = 'rsp meta not match'
+                    raise TcpConnection.Exception(RpcController.WRONG_RSP_META_ERROR, err_msg)
+                elif meta_info.HasField('has_error'):
+                    if meta_info.msg_name != TcpConnection._error_msg_name:
+                        err_msg = 'rsp meta has error, but with wrong msg name'
+                        raise TcpConnection.Exception(RpcController.WRONG_MSG_NAME_ERROR, err_msg)
+                    else:
+                        response_class = rpc_meta_pb2.ErrorResponse
+                elif meta_info.msg_name != response_class.DESCRIPTOR.full_name:
+                    err_msg = 'wrong response class'
+                    raise TcpConnection.Exception(RpcController.WRONG_MSG_NAME_ERROR, err_msg)
 
-            rsp = _parse_message(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
-                                 response_class)
-            del self._recv_infos[meta_info.flow_id]
-            if meta_info.HasField('has_error'):
-                rpc_controller.SetFailed((rsp.err_code, rsp.err_msg))
-                done(None)
-            else:
+                rsp = _parse_message(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
+                                     response_class)
+
+                if meta_info.HasField('has_error'):
+                    raise TcpConnection.Exception(rsp.err_code, rsp.err_msg)
+
+                del self._recv_infos[meta_info.flow_id]
                 done(rsp)
-            return True
+                return True
+            except TcpConnection.Exception as e:
+                rpc_controller.SetFailed((e.err_code, e.err_msg))
+                logging.warning(e.err_msg)
+                del self._recv_infos[meta_info.flow_id]
+                done(None)
+                return True
         else:
             logging.warning('flow id not found:', meta_info.flow_id)
             return True
