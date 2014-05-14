@@ -424,12 +424,13 @@ class RpcServerStat(object):
 
 
 class RpcServer(object):
-    def __init__(self, addr):
+    def __init__(self, addr, service_timeout=10):
         if isinstance(addr, str):
             self._addr = addr.split(':')  # addr string like '127.0.0.1:30006'
         else:
             self._addr = addr
         self._services = {}
+        self._service_timeout = service_timeout
         self._stat = RpcServerStat()
         self._stream_server = gevent.server.StreamServer(self._addr,
                                                          self._handle_connection)
@@ -446,7 +447,7 @@ class RpcServer(object):
             self._stat.add_method_stat(meta_info.service_name,
                                        meta_info.method_name, 1)
 
-            timeout = Timeout(10)
+            timeout = Timeout(self._service_timeout)
             controller = RpcController()
             try:
                 timeout.start()
