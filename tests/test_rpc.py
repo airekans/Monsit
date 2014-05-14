@@ -12,6 +12,9 @@ class FakeTcpSocket(object):
         self.__is_connected = False
         self.__is_client = is_client
 
+    def set_is_client(self, is_client):
+        self.__is_client = is_client
+
     def connect(self, addr):
         self.__is_connected = True
 
@@ -121,6 +124,23 @@ class TcpChannelTest(unittest.TestCase):
         self.assertEqual(serialized_request, channel.get_socket().get_send_content())
         self.assertEqual(1, channel.get_flow_id())
         self.assertEqual(rsp, actual_rsp, str(actual_rsp))
+
+    def test_CallMethodTimeout(self):
+        channel = self.channel
+        self.assertEqual(0, channel.get_flow_id())
+        channel.get_socket().set_is_client(False)
+
+        serialized_request = self.get_serialize_message(0, self.request)
+
+        controller = rpc.RpcController(method_timeout=1)
+        actual_rsp = channel.CallMethod(self.method, controller,
+                                        self.request, self.response_class, None)
+
+        self.assertEqual(serialized_request, channel.get_socket().get_send_content())
+        self.assertEqual(1, channel.get_flow_id())
+        self.assertIsNone(actual_rsp)
+        self.assertTrue(controller.Failed())
+        self.assertEqual(rpc.RpcController.SERVICE_TIMEOUT, controller.err_code)
 
     def test_CallMethodWithEmptyBuffer(self):
         channel = self.channel
