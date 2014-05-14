@@ -7,24 +7,28 @@ import gevent.socket
 import gevent.queue
 import gevent.event
 import gevent
+from gevent import Timeout
 from socket import error as soc_error
 import logging
+import traceback
+import time
+import heapq
 
 from monsit.proto import rpc_meta_pb2
 
 
 class RpcController(google.protobuf.service.RpcController):
     SUCCESS = 0
-    SERVER_SERVICE_ERROR = 1
-    SERVICE_TIMEOUT = 40
-    WRONG_FLOW_ID_ERROR = 50
-    WRONG_RSP_META_ERROR = 51
-    WRONG_MSG_NAME_ERROR = 52
-    SERVER_CLOSE_CONN_ERROR = 53
+    SERVICE_TIMEOUT = 100
+    WRONG_FLOW_ID_ERROR = 101
+    WRONG_RSP_META_ERROR = 102
+    WRONG_MSG_NAME_ERROR = 103
+    SERVER_CLOSE_CONN_ERROR = 104
 
-    def __init__(self):
+    def __init__(self, method_timeout=0):
         self.err_code = RpcController.SUCCESS
         self.err_msg = None
+        self.method_timeout = method_timeout
 
     def Reset(self):
         self.err_code = RpcController.SUCCESS
@@ -95,7 +99,9 @@ class TcpConnection(object):
 
         self._send_task_queue = gevent.queue.Queue()
         self._recv_infos = {}
-        self._workers = [gevent.spawn(self.send_loop), gevent.spawn(self.recv_loop)]
+        self._timeout_queue = []
+        self._workers = [gevent.spawn(self.send_loop), gevent.spawn(self.recv_loop),
+                         gevent.spawn(self.timeout_loop)]
 
     def connect(self):
         self._socket.connect(self._addr)
@@ -111,6 +117,25 @@ class TcpConnection(object):
         self._send_task_queue.put_nowait(
             lambda: self.send_req(flow_id, method_descriptor, rpc_controller,
                                   request, response_class, done))
+
+    def timeout_loop(self):
+        while True:
+            gevent.sleep(1)
+            if len(self._timeout_queue) > 0:
+                now = time.time()
+                while len(self._timeout_queue) > 0:
+                    deadline, flow_id = self._timeout_queue[0]  # the smallest element
+                    if deadline > now:
+                        break
+                    else:
+                        heapq.heappop(self._timeout_queue)
+                        meta_info, rpc_controller, response_class, done = \
+                            self._recv_infos[flow_id]
+                        err_msg = 'service timeout'
+                        rpc_controller.SetFailed((RpcController.SERVICE_TIMEOUT, err_msg))
+                        logging.warning(err_msg)
+                        del self._recv_infos[flow_id]
+                        done(rpc_controller, None)  # this may block
 
     def recv_loop(self):
         while True:
@@ -146,6 +171,9 @@ class TcpConnection(object):
             return
 
         self._recv_infos[flow_id] = meta_info, rpc_controller, response_class, done
+        if rpc_controller.method_timeout > 0:
+            heapq.heappush(self._timeout_queue,
+                           (time.time() + rpc_controller.method_timeout, flow_id))
 
     def _recv(self, expected_size):
         recv_buf = ''
@@ -418,13 +446,20 @@ class RpcServer(object):
             self._stat.add_method_stat(meta_info.service_name,
                                        meta_info.method_name, 1)
 
+            timeout = Timeout(10)
             controller = RpcController()
             try:
+                timeout.start()
                 rsp = service.CallMethod(method, controller, req, None)
+            except Timeout:
+                meta_info.has_error = True
+                rsp = rpc_meta_pb2.ErrorResponse(err_code=rpc_meta_pb2.SERVER_SERVICE_TIMEOUT,
+                                                 err_msg='service timeout')
             except:
                 meta_info.has_error = True
+                err_msg = 'Error calling service: ' + traceback.format_exc()
                 rsp = rpc_meta_pb2.ErrorResponse(err_code=rpc_meta_pb2.SERVER_SERVICE_ERROR,
-                                                 err_msg='Error calling service')
+                                                 err_msg=err_msg)
 
             rsp_queue.put_nowait((meta_info, rsp))
 

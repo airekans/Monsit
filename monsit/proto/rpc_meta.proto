@@ -3,6 +3,7 @@ package rpc;
 enum ErrorCode {
   SUCCESS = 0;
   SERVER_SERVICE_ERROR = 1;
+  SERVER_SERVICE_TIMEOUT = 2;
 }
 
 message MetaInfo {
@@ -14,6 +15,6 @@ message MetaInfo {
 }
 
 message ErrorResponse {
-    required int32 err_code = 1;
+    required ErrorCode err_code = 1;
     required string err_msg = 2;
 }

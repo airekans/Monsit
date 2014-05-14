@@ -202,7 +202,7 @@ class TcpChannelTest(unittest.TestCase):
         self.assertEqual(0, channel.get_flow_id())
 
         serialized_request = self.get_serialize_message(0, self.request)
-        rsp = rpc_meta_pb2.ErrorResponse(err_code=rpc.RpcController.SERVER_SERVICE_ERROR,
+        rsp = rpc_meta_pb2.ErrorResponse(err_code=rpc_meta_pb2.SERVER_SERVICE_ERROR,
                                          err_msg='test error')
         meta_info = rpc_meta_pb2.MetaInfo(flow_id=0,
                                           service_name=self.service_descriptor.full_name,
@@ -219,7 +219,7 @@ class TcpChannelTest(unittest.TestCase):
         self.assertEqual(1, channel.get_flow_id())
         self.assertIsNone(actual_rsp)
         self.assertTrue(controller.Failed())
-        self.assertEqual(rpc.RpcController.SERVER_SERVICE_ERROR, controller.err_code)
+        self.assertEqual(rpc_meta_pb2.SERVER_SERVICE_ERROR, controller.err_code)
 
     def test_CallMethodAsync(self):
         channel = self.channel
