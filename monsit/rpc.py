@@ -2,17 +2,18 @@ import struct
 import google.protobuf.service
 from google.protobuf import message
 
+import gevent
 import gevent.server
 import gevent.socket
 import gevent.queue
 import gevent.event
-import gevent
 from gevent import Timeout
 from socket import error as soc_error
 import logging
 import traceback
 import time
 import heapq
+import random
 
 from monsit.proto import rpc_meta_pb2
 
@@ -86,6 +87,35 @@ def _parse_message(buf, msg_cls):
         return None
 
 
+class LoadBalancerBase(object):
+    def get_connection_for_req(self, flow_id, req, conns):
+        raise NotImplementedError
+
+
+class SingleConnLoadBalancer(LoadBalancerBase):
+    def get_connection_for_req(self, flow_id, req, conns):
+        assert len(conns) == 1
+        return conns[0]
+
+
+class IncLoadBalancer(LoadBalancerBase):
+    def get_connection_for_req(self, flow_id, req, conns):
+        return conns[flow_id % len(conns)]
+
+
+class RandomLoadBalancer(LoadBalancerBase):
+    def get_connection_for_req(self, flow_id, req, conns):
+        return random.choice(conns)
+
+
+class ReqNumLoadBalancer(LoadBalancerBase):
+    def get_conn_req_num(self, conn):
+        return conn.get_pending_send_task_num()
+
+    def get_connection_for_req(self, flow_id, req, conns):
+        return min(conns, key=self.get_conn_req_num)
+
+
 class TcpConnection(object):
 
     class Exception(Exception):
@@ -111,6 +141,9 @@ class TcpConnection(object):
     def close(self):
         self._socket.close()
         gevent.killall(self._workers)
+
+    def get_pending_send_task_num(self):
+        return self._send_task_queue.qsize()
 
     def add_send_task(self, flow_id, method_descriptor, rpc_controller,
                       request, response_class, done):
@@ -273,6 +306,11 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         for ip_port in self.resolve_addr(addr):
             self._connections.append(conn_class(ip_port))
 
+        if len(self._connections) == 1:
+            self._balancer = SingleConnLoadBalancer()
+        else:
+            self._balancer = IncLoadBalancer()
+
     def __del__(self):
         self.close()
 
@@ -321,10 +359,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
     def CallMethod(self, method_descriptor, rpc_controller,
                    request, response_class, done):
         flow_id = self._get_flow_id()
-        if len(self._connections) == 1:
-            conn = self._connections[0]
-        else:
-            conn = self._connections[flow_id % len(self._connections)]
+        conn = self._balancer.get_connection_for_req(flow_id, request, self._connections)
 
         if done is None:
             res = gevent.event.AsyncResult()
