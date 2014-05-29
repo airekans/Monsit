@@ -116,11 +116,52 @@ class ReqNumLoadBalancer(LoadBalancerBase):
         return min(conns, key=self.get_conn_req_num)
 
 
+class TcpConnectionStat(object):
+    def __init__(self):
+        self.total_req_num_per_min = 0
+        self.total_rsp_num_per_min = 0
+        self.total_delay_ms_per_min = 0
+        self.max_delay_ms_per_min = -1
+        self.min_delay_ms_per_min = -1
+
+    def add_req_stat(self, count=1):
+        self.total_req_num_per_min += count
+
+    def add_rsp_stat(self, count, delay_ms):
+        self.total_rsp_num_per_min += count
+        self.total_delay_ms_per_min = delay_ms
+
+        if delay_ms > self.max_delay_ms_per_min:
+            self.max_delay_ms_per_min = delay_ms
+
+        if self.min_delay_ms_per_min < 0 or delay_ms < self.min_delay_ms_per_min:
+            self.min_delay_ms_per_min = delay_ms
+
+    @property
+    def avg_delay_ms_per_min(self):
+        if self.total_rsp_num_per_min <= 0:
+            return -1
+        else:
+            return self.total_delay_ms_per_min / self.total_rsp_num_per_min
+
+    def reset_stat_per_min(self):
+        self.total_req_num_per_min = 0
+        self.total_rsp_num_per_min = 0
+        self.total_delay_ms_per_min = 0
+        self.min_delay_ms_per_min = 0
+        self.max_delay_ms_per_min = 0
+
+
 class TcpConnection(object):
 
     class Exception(Exception):
         def __init__(self, err_code, err_msg):
             self.err_code, self.err_msg = err_code, err_msg
+
+    class _RequestData(object):
+        def __init__(self, is_async):
+            self.begin_time = 0
+            self.is_async = is_async
 
     def __init__(self, addr, socket_cls=gevent.socket.socket):
         self._addr = addr
@@ -132,6 +173,8 @@ class TcpConnection(object):
         self._timeout_queue = []
         self._workers = [gevent.spawn(self.send_loop), gevent.spawn(self.recv_loop),
                          gevent.spawn(self.timeout_loop)]
+
+        self._stat = TcpConnectionStat()
 
     def connect(self):
         self._socket.connect(self._addr)
@@ -146,10 +189,10 @@ class TcpConnection(object):
         return self._send_task_queue.qsize()
 
     def add_send_task(self, flow_id, method_descriptor, rpc_controller,
-                      request, response_class, done):
+                      request, response_class, done, req_data):
         self._send_task_queue.put_nowait(
             lambda: self.send_req(flow_id, method_descriptor, rpc_controller,
-                                  request, response_class, done))
+                                  request, response_class, done, req_data))
 
     def timeout_loop(self):
         while True:
@@ -162,8 +205,10 @@ class TcpConnection(object):
                         break
                     else:
                         heapq.heappop(self._timeout_queue)
-                        meta_info, rpc_controller, response_class, done = \
+                        meta_info, rpc_controller, response_class, done, req_data = \
                             self._recv_infos[flow_id]
+                        timeout_time = time.time()
+                        self._stat.add_rsp_stat(1, timeout_time - req_data.begin_time)
                         err_msg = 'service timeout'
                         rpc_controller.SetFailed((RpcController.SERVICE_TIMEOUT, err_msg))
                         logging.warning(err_msg)
@@ -177,10 +222,12 @@ class TcpConnection(object):
 
         # check if there is any request has not been processed.
         for v in self._recv_infos.itervalues():
-            expected_meta, rpc_controller, response_class, done = v
+            expected_meta, rpc_controller, response_class, done, req_data = v
             rpc_controller.SetFailed((RpcController.SERVER_CLOSE_CONN_ERROR,
                                       'channel has been closed prematurely'))
             done(rpc_controller, None)
+
+        self._recv_infos.clear()
 
     def send_loop(self):
         while True:
@@ -188,7 +235,7 @@ class TcpConnection(object):
             send_task()
 
     def send_req(self, flow_id, method_descriptor, rpc_controller,
-                 request, response_class, done):
+                 request, response_class, done, req_data):
         service_descriptor = method_descriptor.containing_service
         meta_info = rpc_meta_pb2.MetaInfo()
         meta_info.flow_id = flow_id
@@ -203,10 +250,12 @@ class TcpConnection(object):
             logging.warning('socket error: ' + e)
             return
 
-        self._recv_infos[flow_id] = meta_info, rpc_controller, response_class, done
+        req_data.begin_time = time.time()
+        self._recv_infos[flow_id] = (meta_info, rpc_controller, response_class, done, req_data)
+        self._stat.add_req_stat()
         if rpc_controller.method_timeout > 0:
             heapq.heappush(self._timeout_queue,
-                           (time.time() + rpc_controller.method_timeout, flow_id))
+                           (req_data.begin_time + rpc_controller.method_timeout, flow_id))
 
     def _recv(self, expected_size):
         recv_buf = ''
@@ -255,7 +304,7 @@ class TcpConnection(object):
         meta_len, pb_msg_len, meta_info = result
 
         if meta_info.flow_id in self._recv_infos:
-            expected_meta, rpc_controller, response_class, done = \
+            expected_meta, rpc_controller, response_class, done, req_data = \
                 self._recv_infos[meta_info.flow_id]
 
             try:
@@ -277,6 +326,8 @@ class TcpConnection(object):
                     err_msg = 'wrong response class'
                     raise TcpConnection.Exception(RpcController.WRONG_MSG_NAME_ERROR, err_msg)
 
+                rsp_time = time.time()
+                self._stat.add_rsp_stat(1, rsp_time - req_data.begin_time)
                 rsp = _parse_message(pb_buf[8 + meta_len:8 + meta_len + pb_msg_len],
                                      response_class)
 
@@ -365,11 +416,13 @@ class TcpChannel(google.protobuf.service.RpcChannel):
             res = gevent.event.AsyncResult()
             done = lambda _, rsp: res.set(rsp)
             conn.add_send_task(flow_id, method_descriptor, rpc_controller,
-                               request, response_class, done)
+                               request, response_class, done,
+                               TcpConnection._RequestData(False))
             return res.get()
         else:
             conn.add_send_task(flow_id, method_descriptor, rpc_controller,
-                               request, response_class, done)
+                               request, response_class, done,
+                               TcpConnection._RequestData(True))
             return None
 
 
