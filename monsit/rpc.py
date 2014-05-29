@@ -482,11 +482,10 @@ class RpcServer(object):
             self._stat.add_method_stat(meta_info.service_name,
                                        meta_info.method_name, 1)
 
-            timeout = Timeout(self._service_timeout)
             controller = RpcController()
             try:
-                timeout.start()
-                rsp = service.CallMethod(method, controller, req, None)
+                with Timeout(self._service_timeout):
+                    rsp = service.CallMethod(method, controller, req, None)
             except Timeout:
                 meta_info.has_error = True
                 rsp = rpc_meta_pb2.ErrorResponse(err_code=rpc_meta_pb2.SERVER_SERVICE_TIMEOUT,
