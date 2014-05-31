@@ -7,6 +7,7 @@ import gevent.server
 import gevent.socket
 import gevent.queue
 import gevent.event
+import gevent.pool
 from gevent import Timeout
 from socket import error as soc_error
 import logging
@@ -16,6 +17,39 @@ import heapq
 import random
 
 from monsit.proto import rpc_meta_pb2
+
+
+class Pool(object):
+    def __init__(self, pool_size=None):
+        self._task_queue = gevent.queue.JoinableQueue()
+        self._pool = gevent.pool.Pool(pool_size)
+        if pool_size is None:
+            pool_size = 100
+
+        for _ in xrange(pool_size):
+            self._pool.spawn(self.worker_func)
+
+    def worker_func(self):
+        while True:
+            task = self._task_queue.get()
+            if task is None:
+                self._task_queue.task_done()
+                break
+            task()
+            self._task_queue.task_done()
+
+    def spawn(self, func, *args, **kwargs):
+        task = lambda: func(*args, **kwargs)
+        self._task_queue.put_nowait(task)
+
+    def join(self):
+        for _ in xrange(len(self._pool)):
+            self._task_queue.put_nowait(None)
+        self._task_queue.join()
+        self._pool.join()
+
+    def kill(self):
+        self._pool.kill()
 
 
 class RpcController(google.protobuf.service.RpcController):
@@ -180,8 +214,9 @@ class TcpConnection(object):
             self.begin_time = 0
             self.is_async = is_async
 
-    def __init__(self, addr, socket_cls=gevent.socket.socket):
+    def __init__(self, addr, socket_cls=gevent.socket.socket, spawn=gevent.spawn):
         self._addr = addr
+        self._spawn = spawn
         self._socket = socket_cls()
         self.connect()
 
@@ -233,7 +268,7 @@ class TcpConnection(object):
                         rpc_controller.SetFailed((RpcController.SERVICE_TIMEOUT, err_msg))
                         logging.warning(err_msg)
                         del self._recv_infos[flow_id]
-                        done(rpc_controller, None)  # this may block
+                        self._spawn(done, rpc_controller, None)
 
     def recv_loop(self):
         while True:
@@ -245,7 +280,7 @@ class TcpConnection(object):
             expected_meta, rpc_controller, response_class, done, req_data = v
             rpc_controller.SetFailed((RpcController.SERVER_CLOSE_CONN_ERROR,
                                       'channel has been closed prematurely'))
-            done(rpc_controller, None)
+            self._spawn(done, rpc_controller, None)
 
         self._recv_infos.clear()
 
@@ -355,13 +390,13 @@ class TcpConnection(object):
                     raise TcpConnection.Exception(rsp.err_code, rsp.err_msg)
 
                 del self._recv_infos[meta_info.flow_id]
-                done(rpc_controller, rsp)
+                self._spawn(done, rpc_controller, rsp)
                 return True
             except TcpConnection.Exception as e:
                 rpc_controller.SetFailed((e.err_code, e.err_msg))
                 logging.warning(e.err_msg)
                 del self._recv_infos[meta_info.flow_id]
-                done(rpc_controller, None)
+                self._spawn(done, rpc_controller, None)
                 return True
         else:
             logging.warning('flow id not found:', meta_info.flow_id)
@@ -369,13 +404,14 @@ class TcpConnection(object):
 
 
 class TcpChannel(google.protobuf.service.RpcChannel):
-    def __init__(self, addr, conn_class=TcpConnection, load_balancer=None):
+    def __init__(self, addr, conn_class=TcpConnection, load_balancer=None,
+                 spawn=gevent.spawn):
         google.protobuf.service.RpcChannel.__init__(self)
         self._flow_id = 0
         self._addr = addr
         self._connections = []
         for ip_port in self.resolve_addr(addr):
-            self._connections.append(conn_class(ip_port))
+            self._connections.append(conn_class(ip_port, spawn))
 
         if len(self._connections) == 1:
             self._balancer = SingleConnLoadBalancer()
@@ -455,16 +491,19 @@ class RpcClient(object):
 
     def __init__(self):
         self._channels = {}
+        self._pool = Pool(1000)
 
     def __del__(self):
         for channel in self._channels.itervalues():
             channel.close()
 
+        self._pool.join()
+
     def get_tcp_channel(self, addr):
         if isinstance(addr, list):
             addr = tuple(addr)
         if addr not in self._channels:
-            channel = RpcClient.tcp_channel_class(addr)
+            channel = RpcClient.tcp_channel_class(addr, self._pool.spawn)
             self._channels[addr] = channel
         else:
             channel = self._channels[addr]

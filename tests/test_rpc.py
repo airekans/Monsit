@@ -53,9 +53,13 @@ class FakeTcpSocket(object):
         return self.__send_content
 
 
+def fake_spawn(func, *args, **kwargs):
+    func(*args, **kwargs)
+
+
 class FakeTcpConnection(rpc.TcpConnection):
     def __init__(self, addr, recv_content):
-        rpc.TcpConnection.__init__(self, addr, FakeTcpSocket)
+        rpc.TcpConnection.__init__(self, addr, FakeTcpSocket, spawn=fake_spawn)
 
     def get_socket(self):
         return self._socket
@@ -63,9 +67,9 @@ class FakeTcpConnection(rpc.TcpConnection):
 
 class FakeTcpChannel(rpc.TcpChannel):
 
-    def __init__(self, addr, recv_content=''):
+    def __init__(self, addr, spawn, recv_content=''):
         rpc.TcpChannel.__init__(self, addr,
-                                lambda ad: FakeTcpConnection(ad, recv_content))
+                                lambda ad, _spawn: FakeTcpConnection(ad, recv_content))
         self.socket = self._connections[0].get_socket()
         if recv_content:
             self.socket.set_recv_content(recv_content)
