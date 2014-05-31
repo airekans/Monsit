@@ -117,8 +117,20 @@ class ReqNumLoadBalancer(LoadBalancerBase):
 
 
 class DelayLoadBalancer(LoadBalancerBase):
+    def __init__(self):
+        self._call_times = 0
+
+    def get_conn_avg_delay(self, conn):
+        return conn.get_stat().avg_delay_s_per_min
+
     def get_connection_for_req(self, flow_id, req, conns):
-        raise NotImplementedError
+        if self._call_times == 0:
+            conn = random.choice(conns)
+        else:
+            conn = min(conns, key=self.get_conn_avg_delay)
+
+        self._call_times = (self._call_times + 1) % 100
+        return conn
 
 
 class TcpConnectionStat(object):
@@ -153,8 +165,8 @@ class TcpConnectionStat(object):
         self.total_req_num_per_min = 0
         self.total_rsp_num_per_min = 0
         self.total_delay_s_per_min = 0
-        self.min_delay_s_per_min = 0
-        self.max_delay_s_per_min = 0
+        self.min_delay_s_per_min = -1
+        self.max_delay_s_per_min = -1
 
 
 class TcpConnection(object):
@@ -357,7 +369,7 @@ class TcpConnection(object):
 
 
 class TcpChannel(google.protobuf.service.RpcChannel):
-    def __init__(self, addr, conn_class=TcpConnection):
+    def __init__(self, addr, conn_class=TcpConnection, load_balancer=None):
         google.protobuf.service.RpcChannel.__init__(self)
         self._flow_id = 0
         self._addr = addr
@@ -367,8 +379,11 @@ class TcpChannel(google.protobuf.service.RpcChannel):
 
         if len(self._connections) == 1:
             self._balancer = SingleConnLoadBalancer()
+        elif load_balancer is not None:
+            self._balancer = load_balancer
         else:
             self._balancer = IncLoadBalancer()
+        logging.info('use %s as load balancer' % self._balancer.__class__.__name__)
 
     def __del__(self):
         self.close()
