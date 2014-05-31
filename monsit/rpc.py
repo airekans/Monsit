@@ -116,40 +116,45 @@ class ReqNumLoadBalancer(LoadBalancerBase):
         return min(conns, key=self.get_conn_req_num)
 
 
+class DelayLoadBalancer(LoadBalancerBase):
+    def get_connection_for_req(self, flow_id, req, conns):
+        raise NotImplementedError
+
+
 class TcpConnectionStat(object):
     def __init__(self):
         self.total_req_num_per_min = 0
         self.total_rsp_num_per_min = 0
-        self.total_delay_ms_per_min = 0
-        self.max_delay_ms_per_min = -1
-        self.min_delay_ms_per_min = -1
+        self.total_delay_s_per_min = 0
+        self.max_delay_s_per_min = -1
+        self.min_delay_s_per_min = -1
 
     def add_req_stat(self, count=1):
         self.total_req_num_per_min += count
 
-    def add_rsp_stat(self, count, delay_ms):
+    def add_rsp_stat(self, count, delay_s):
         self.total_rsp_num_per_min += count
-        self.total_delay_ms_per_min = delay_ms
+        self.total_delay_s_per_min = delay_s
 
-        if delay_ms > self.max_delay_ms_per_min:
-            self.max_delay_ms_per_min = delay_ms
+        if delay_s > self.max_delay_s_per_min:
+            self.max_delay_s_per_min = delay_s
 
-        if self.min_delay_ms_per_min < 0 or delay_ms < self.min_delay_ms_per_min:
-            self.min_delay_ms_per_min = delay_ms
+        if self.min_delay_s_per_min < 0 or delay_s < self.min_delay_s_per_min:
+            self.min_delay_s_per_min = delay_s
 
     @property
-    def avg_delay_ms_per_min(self):
+    def avg_delay_s_per_min(self):
         if self.total_rsp_num_per_min <= 0:
             return -1
         else:
-            return self.total_delay_ms_per_min / self.total_rsp_num_per_min
+            return self.total_delay_s_per_min / self.total_rsp_num_per_min
 
     def reset_stat_per_min(self):
         self.total_req_num_per_min = 0
         self.total_rsp_num_per_min = 0
-        self.total_delay_ms_per_min = 0
-        self.min_delay_ms_per_min = 0
-        self.max_delay_ms_per_min = 0
+        self.total_delay_s_per_min = 0
+        self.min_delay_s_per_min = 0
+        self.max_delay_s_per_min = 0
 
 
 class TcpConnection(object):
@@ -184,6 +189,9 @@ class TcpConnection(object):
     def close(self):
         self._socket.close()
         gevent.killall(self._workers)
+
+    def get_stat(self):
+        return self._stat
 
     def get_pending_send_task_num(self):
         return self._send_task_queue.qsize()
