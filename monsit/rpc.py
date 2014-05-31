@@ -249,6 +249,12 @@ class TcpConnection(object):
             lambda: self.send_req(flow_id, method_descriptor, rpc_controller,
                                   request, response_class, done, req_data))
 
+    def _finish_rpc(self, done, controller, rsp, is_async):
+        if is_async:
+            self._spawn(done, controller, rsp)
+        else:
+            done(controller, rsp)
+
     def timeout_loop(self):
         while True:
             gevent.sleep(1)
@@ -268,7 +274,7 @@ class TcpConnection(object):
                         rpc_controller.SetFailed((RpcController.SERVICE_TIMEOUT, err_msg))
                         logging.warning(err_msg)
                         del self._recv_infos[flow_id]
-                        self._spawn(done, rpc_controller, None)
+                        self._finish_rpc(done, rpc_controller, None, req_data.is_async)
 
     def recv_loop(self):
         while True:
@@ -280,7 +286,7 @@ class TcpConnection(object):
             expected_meta, rpc_controller, response_class, done, req_data = v
             rpc_controller.SetFailed((RpcController.SERVER_CLOSE_CONN_ERROR,
                                       'channel has been closed prematurely'))
-            self._spawn(done, rpc_controller, None)
+            self._finish_rpc(done, rpc_controller, None, req_data.is_async)
 
         self._recv_infos.clear()
 
@@ -390,13 +396,13 @@ class TcpConnection(object):
                     raise TcpConnection.Exception(rsp.err_code, rsp.err_msg)
 
                 del self._recv_infos[meta_info.flow_id]
-                self._spawn(done, rpc_controller, rsp)
+                self._finish_rpc(done, rpc_controller, rsp, req_data.is_async)
                 return True
             except TcpConnection.Exception as e:
                 rpc_controller.SetFailed((e.err_code, e.err_msg))
                 logging.warning(e.err_msg)
                 del self._recv_infos[meta_info.flow_id]
-                self._spawn(done, rpc_controller, None)
+                self._finish_rpc(done, rpc_controller, None, req_data.is_async)
                 return True
         else:
             logging.warning('flow id not found:', meta_info.flow_id)
