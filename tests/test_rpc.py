@@ -318,6 +318,8 @@ class FakeRpcServer(rpc.RpcServer):
         self._services = {}
         self._service_timeout = service_timeout
         self._stat = rpc.RpcServerStat()
+        self._pool = None
+        self._spawn = gevent.spawn
         # not calling parent's __init__ to bypass the StreamServer init
 
     def set_service_timeout(self, service_timeout):

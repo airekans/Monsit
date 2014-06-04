@@ -495,9 +495,9 @@ class RpcClient(object):
 
     tcp_channel_class = TcpChannel
 
-    def __init__(self):
+    def __init__(self, pool_size=1000):
         self._channels = {}
-        self._pool = Pool(1000)
+        self._pool = Pool(pool_size)
 
     def __del__(self):
         for channel in self._channels.itervalues():
@@ -580,11 +580,20 @@ class RpcServerStat(object):
 
 
 class RpcServer(object):
-    def __init__(self, addr, service_timeout=10):
+    def __init__(self, addr, service_timeout=10, spawn=1000):
         if isinstance(addr, str):
             self._addr = addr.split(':')  # addr string like '127.0.0.1:30006'
+            self._addr[1] = int(self._addr[1])
         else:
             self._addr = addr
+
+        if isinstance(spawn, (int, long)):
+            self._pool = Pool(spawn)
+            self._spawn = self._pool.spawn
+        else:
+            self._pool = None
+            self._spawn = spawn
+
         self._services = {}
         self._service_timeout = service_timeout
         self._stat = RpcServerStat()
@@ -652,7 +661,7 @@ class RpcServer(object):
                         logging.warning('pb decode error, skip this message')
                         break
 
-                    gevent.spawn(call_service, result)
+                    self._spawn(call_service, result)
 
                 if cur_index > 0:
                     content = content[cur_index:]
@@ -721,4 +730,6 @@ class RpcServer(object):
             self._stream_server.serve_forever()
         finally:
             stat_worker.kill()
+            if self._pool is not None:
+                self._pool.join()
 
