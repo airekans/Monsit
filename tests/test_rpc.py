@@ -84,6 +84,45 @@ class FakeTcpChannel(rpc.TcpChannel):
         return self._flow_id
 
 
+class LoadBalancerTest(unittest.TestCase):
+
+    def setUp(self):
+        self.req = test_pb2.TestRequest()
+
+    def test_SingleLoadBalancer(self):
+        balancer = rpc.SingleConnLoadBalancer()
+        conns = [FakeTcpConnection('127.0.0.1:11111', '')]
+        conn = balancer.get_connection_for_req(0, self.req, conns)
+        self.assertIs(conn, conns[0])
+
+    def test_SingleLoadBalancerWithMultipleConn(self):
+        balancer = rpc.SingleConnLoadBalancer()
+        conns = [FakeTcpConnection('127.0.0.1:11111', ''),
+                 FakeTcpConnection('127.0.0.1:11112', '')]
+        try:
+            conn = balancer.get_connection_for_req(0, self.req, conns)
+            self.fail()
+        except AssertionError:
+            pass
+
+    def test_IncLoadBalancerWithSingleConn(self):
+        balancer = rpc.IncLoadBalancer()
+        conns = [FakeTcpConnection('127.0.0.1:11111', '')]
+        for flow_id in xrange(10):
+            conn = balancer.get_connection_for_req(flow_id, self.req, conns)
+            self.assertIs(conn, conns[0])
+
+    def test_IncLoadBalancerWithMultipleConns(self):
+        balancer = rpc.IncLoadBalancer()
+        conns = [FakeTcpConnection('127.0.0.1:11111', ''),
+                 FakeTcpConnection('127.0.0.1:11112', ''),
+                 FakeTcpConnection('127.0.0.1:11112', '')]
+        for flow_id in xrange(10):
+            conn = balancer.get_connection_for_req(flow_id, self.req, conns)
+            self.assertIs(conn, conns[flow_id % len(conns)])
+
+
+
 class TcpChannelTest(unittest.TestCase):
 
     def setUp(self):
