@@ -151,14 +151,15 @@ class ReqNumLoadBalancer(LoadBalancerBase):
 
 
 class DelayLoadBalancer(LoadBalancerBase):
-    def __init__(self):
+    def __init__(self, is_random=True):
         self._call_times = 0
+        self._is_random = is_random
 
     def get_conn_avg_delay(self, conn):
-        return conn.get_stat().avg_delay_s_per_min
+        return conn.get_avg_delay_per_min()
 
     def get_connection_for_req(self, flow_id, req, conns):
-        if self._call_times == 0:
+        if self._is_random and self._call_times == 0:
             conn = random.choice(conns)
         else:
             conn = min(conns, key=self.get_conn_avg_delay)
@@ -239,6 +240,9 @@ class TcpConnection(object):
 
     def get_stat(self):
         return self._stat
+
+    def get_avg_delay_per_min(self):
+        return self.get_stat().avg_delay_s_per_min
 
     def get_pending_send_task_num(self):
         return self._send_task_queue.qsize()
