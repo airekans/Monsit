@@ -365,7 +365,7 @@ class TcpConnection(object):
 
                 recv_buf += buf
             except Exception, e:
-                logging.warning('recv failed: ' + e)
+                logging.warning('recv failed: ' + str(e))
                 break
 
         return recv_buf
