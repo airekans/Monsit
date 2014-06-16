@@ -234,7 +234,7 @@ class TcpConnection(object):
         self._addr = addr
         self._spawn = spawn
         self._socket = socket_cls()
-        self.connect()
+        self.connect()  # this may cause problem
 
         self._send_task_queue = gevent.queue.Queue()
         self._recv_infos = {}
@@ -251,6 +251,26 @@ class TcpConnection(object):
 
     def close(self):
         self._socket.close()
+
+        # clear all data
+        # TODO: put the un-sent tasks to other connections in the channel.
+        while not self._send_task_queue.empty():
+            try:
+                self._send_task_queue.get_nowait()
+            except gevent.queue.Empty:
+                pass
+
+        # check if there is any request has not been processed.
+        for v in self._recv_infos.itervalues():
+            expected_meta, rpc_controller, response_class, done, req_data = v
+            rpc_controller.SetFailed((RpcController.SERVER_CLOSE_CONN_ERROR,
+                                      'channel has been closed prematurely'))
+            self._finish_rpc(done, rpc_controller, None, req_data.is_async)
+
+        self._recv_infos.clear()
+
+        # kill all workers in the last step, because if a worker calls this function,
+        # the statements after this call will not be executed.
         gevent.killall(self._workers)
 
     def get_stat(self):
@@ -300,14 +320,7 @@ class TcpConnection(object):
             if not self.recv_rsp():
                 break
 
-        # check if there is any request has not been processed.
-        for v in self._recv_infos.itervalues():
-            expected_meta, rpc_controller, response_class, done, req_data = v
-            rpc_controller.SetFailed((RpcController.SERVER_CLOSE_CONN_ERROR,
-                                      'channel has been closed prematurely'))
-            self._finish_rpc(done, rpc_controller, None, req_data.is_async)
-
-        self._recv_infos.clear()
+        self.close()
 
     def send_loop(self):
         while True:
@@ -327,7 +340,12 @@ class TcpConnection(object):
             while sent_bytes < len(serialized_req):
                 sent_bytes += self._socket.send(serialized_req[sent_bytes:])
         except soc_error as e:
-            logging.warning('socket error: ' + e)
+            logging.warning('socket error: ' + str(e))
+            rpc_controller.SetFailed((RpcController.SERVER_CLOSE_CONN_ERROR,
+                                      'connection has sending error'))
+            self._finish_rpc(done, rpc_controller, None, req_data.is_async)
+
+            self.close()
             return
 
         req_data.begin_time = time.time()

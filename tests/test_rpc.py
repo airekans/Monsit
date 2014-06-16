@@ -6,11 +6,15 @@ import gevent
 
 
 class FakeTcpSocket(object):
-    def __init__(self, is_client=True):
+    def __init__(self, is_client=True, send_func=None):
         self.__recv_content = ""
         self.__send_content = ""
         self.__is_connected = False
         self.__is_client = is_client
+        self._send_func = self._send if send_func is None else send_func
+
+    def set_send_func(self, send_func):
+        self._send_func = send_func
 
     def set_is_client(self, is_client):
         self.__is_client = is_client
@@ -42,9 +46,12 @@ class FakeTcpSocket(object):
         self.__recv_content = self.__recv_content[size:]
         return buf
 
-    def send(self, buf):
+    def _send(self, buf):
         self.__send_content += buf
         return len(buf)
+
+    def send(self, buf):
+        return self._send_func(buf)
 
     def set_recv_content(self, recv_content):
         self.__recv_content = recv_content
@@ -58,8 +65,12 @@ def fake_spawn(func, *args, **kwargs):
 
 
 class FakeTcpConnection(rpc.TcpConnection):
+
+    socket_class = FakeTcpSocket
+
     def __init__(self, addr, recv_content, send_task_num=0, avg_delay=0):
-        rpc.TcpConnection.__init__(self, addr, FakeTcpSocket, spawn=fake_spawn)
+        rpc.TcpConnection.__init__(self, addr, FakeTcpConnection.socket_class,
+                                   spawn=fake_spawn)
         self._send_task_num = send_task_num
         self._avg_delay_per_min = avg_delay
 
@@ -150,7 +161,7 @@ class LoadBalancerTest(unittest.TestCase):
 
         count_sum = 0
         for count in conn_count.itervalues():
-            self.assertGreater(count, 0)
+            self.assertGreaterEqual(count, 0)
             count_sum += count
 
         self.assertEqual(10, count_sum)
@@ -202,8 +213,6 @@ class LoadBalancerTest(unittest.TestCase):
             conn_map[conn] += 1
             self.assertIn(conn, conns)
         print [(conn.get_avg_delay_per_min(), cnt) for conn, cnt in conn_map.iteritems()]
-
-
 
 
 class TcpChannelTest(unittest.TestCase):
@@ -267,6 +276,29 @@ class TcpChannelTest(unittest.TestCase):
         self.assertIsNone(actual_rsp)
         self.assertTrue(controller.Failed())
         self.assertEqual(rpc.RpcController.SERVICE_TIMEOUT, controller.err_code)
+
+    def test_CallMethodWithSendingError(self):
+        channel = self.channel
+        self.assertEqual(0, channel.get_flow_id())
+
+        def send_func(_buf):
+            from socket import error as soc_error
+            raise soc_error
+
+        channel.get_socket().set_send_func(send_func)
+
+        serialized_request = self.get_serialize_message(0, self.request)
+        rsp = self.response_class(return_code=0, msg='SUCCESS')
+
+        controller = rpc.RpcController()
+        actual_rsp = channel.CallMethod(self.method, controller,
+                                        self.request, self.response_class, None)
+
+        self.assertEqual('', channel.get_socket().get_send_content())
+        self.assertEqual(1, channel.get_flow_id())
+        self.assertIsNone(actual_rsp)
+        self.assertTrue(controller.Failed())
+        self.assertEqual(rpc.RpcController.SERVER_CLOSE_CONN_ERROR, controller.err_code)
 
     def test_CallMethodWithEmptyBuffer(self):
         channel = self.channel
