@@ -454,7 +454,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         self._addr = addr
         self._connections = []
         for ip_port in self.resolve_addr(addr):
-            self._connections.append(conn_class(ip_port, spawn))
+            self._connections.append(conn_class(ip_port, spawn=spawn))
 
         if len(self._connections) == 1:
             self._balancer = SingleConnLoadBalancer()
@@ -546,7 +546,7 @@ class RpcClient(object):
         if isinstance(addr, list):
             addr = tuple(addr)
         if addr not in self._channels:
-            channel = RpcClient.tcp_channel_class(addr, self._pool.spawn)
+            channel = RpcClient.tcp_channel_class(addr, spawn=self._pool.spawn)
             self._channels[addr] = channel
         else:
             channel = self._channels[addr]
