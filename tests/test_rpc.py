@@ -68,12 +68,17 @@ class FakeTcpConnection(rpc.TcpConnection):
 
     socket_class = FakeTcpSocket
 
-    def __init__(self, addr, recv_content, load_balancer=None,
+    def __init__(self, addr, recv_content, evt_listener=None, load_balancer=None,
                  spawn=None, send_task_num=0, avg_delay=0):
-        rpc.TcpConnection.__init__(self, addr, FakeTcpConnection.socket_class,
-                                   spawn=fake_spawn)
+        if evt_listener is None:
+            evt_listener = self.fake_state_evt_listener
+        rpc.TcpConnection.__init__(self, addr, evt_listener,
+                                   FakeTcpConnection.socket_class, spawn=fake_spawn)
         self._send_task_num = send_task_num
         self._avg_delay_per_min = avg_delay
+
+    def fake_state_evt_listener(self, *args, **kwargs):
+        pass
 
     def get_socket(self):
         return self._socket
@@ -88,14 +93,16 @@ class FakeTcpConnection(rpc.TcpConnection):
 class FakeTcpChannel(rpc.TcpChannel):
 
     def __init__(self, addr, spawn, recv_content=''):
+        conn_creator = lambda ad, listener, spawn: \
+            FakeTcpConnection(ad, recv_content, evt_listener=listener)
         rpc.TcpChannel.__init__(self, addr,
-                                conn_class=lambda ad, spawn: FakeTcpConnection(ad, recv_content))
-        self.socket = self._connections[0].get_socket()
+                                conn_class=conn_creator)
+        self.socket = self._good_connections[0].get_socket()
         if recv_content:
             self.socket.set_recv_content(recv_content)
 
     def get_connections(self):
-        return self._connections
+        return self._good_connections
 
     def get_socket(self):
         return self.socket
@@ -169,7 +176,7 @@ class LoadBalancerTest(unittest.TestCase):
 
     def test_ReqNumLoadBalancerWithSingleConn(self):
         balancer = rpc.ReqNumLoadBalancer()
-        conns = [FakeTcpConnection('127.0.0.1:11111', '', 2)]
+        conns = [FakeTcpConnection('127.0.0.1:11111', '', send_task_num=2)]
         for flow_id in xrange(10):
             conn = balancer.get_connection_for_req(flow_id, self.req, conns)
             self.assertIs(conn, conns[0])
@@ -239,7 +246,7 @@ class LoadBalancerTest(unittest.TestCase):
 class TcpChannelTest(unittest.TestCase):
 
     def setUp(self):
-        self.channel = FakeTcpChannel('127.0.0.1:11111', "")
+        self.channel = FakeTcpChannel('127.0.0.1:11111', None, recv_content="")
         self.assertTrue(self.channel.get_socket().is_connected())
 
         self.service_stub = test_pb2.TestService_Stub(self.channel)

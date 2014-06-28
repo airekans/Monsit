@@ -230,7 +230,15 @@ class TcpConnection(object):
             self.begin_time = 0
             self.is_async = is_async
 
-    def __init__(self, addr, socket_cls=gevent.socket.socket, spawn=gevent.spawn):
+    # state enumeration definition
+    CLOSED = 0
+    CONNECTED = 1
+    UNHEALTHY = 2
+
+    def __init__(self, addr, state_evt_listener,
+                 socket_cls=gevent.socket.socket, spawn=gevent.spawn):
+        self._state = TcpConnection.CLOSED
+        self._state_evt_listener = state_evt_listener
         self._addr = addr
         self._spawn = spawn
         self._socket = socket_cls()
@@ -248,9 +256,11 @@ class TcpConnection(object):
         self._socket.connect(self._addr)
         self._socket.setsockopt(gevent.socket.SOL_TCP, gevent.socket.TCP_NODELAY, 1)
         self._socket.setsockopt(gevent.socket.IPPROTO_TCP, gevent.socket.TCP_NODELAY, 1)
+        self.change_state(TcpConnection.CONNECTED)
 
     def close(self):
         self._socket.close()
+        self.change_state(TcpConnection.CLOSED)
 
         # clear all data
         # TODO: put the un-sent tasks to other connections in the channel.
@@ -272,6 +282,12 @@ class TcpConnection(object):
         # kill all workers in the last step, because if a worker calls this function,
         # the statements after this call will not be executed.
         gevent.killall(self._workers)
+
+    def change_state(self, state):
+        if self._state != state:
+            old_state = self._state
+            self._state = state
+            self._state_evt_listener(self, old_state, state)
 
     def get_stat(self):
         return self._stat
@@ -447,16 +463,21 @@ class TcpConnection(object):
 
 
 class TcpChannel(google.protobuf.service.RpcChannel):
+
     def __init__(self, addr, conn_class=TcpConnection, load_balancer=None,
                  spawn=gevent.spawn):
         google.protobuf.service.RpcChannel.__init__(self)
         self._flow_id = 0
         self._addr = addr
-        self._connections = []
-        for ip_port in self.resolve_addr(addr):
-            self._connections.append(conn_class(ip_port, spawn=spawn))
 
-        if len(self._connections) == 1:
+        self._good_connections = []
+        self._bad_connections = []
+        for ip_port in self.resolve_addr(addr):
+            conn_class(ip_port, self.on_conn_state_changed, spawn=spawn)
+            # no need to add conn because it will
+            # add itself in state_changed function.
+
+        if len(self._good_connections) == 1:
             self._balancer = SingleConnLoadBalancer()
         elif load_balancer is not None:
             self._balancer = load_balancer
@@ -473,8 +494,27 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         return flow_id
 
     def close(self):
-        for conn in self._connections:
+        for conn in self._good_connections:
             conn.close()
+
+    def on_conn_state_changed(self, conn, old_state, new_state):
+        try:  # TODO: this try block should be removed in production
+            if new_state == TcpConnection.CONNECTED:
+                if old_state == TcpConnection.UNHEALTHY:
+                    self._bad_connections.remove(conn)
+                self._good_connections.append(conn)
+            elif new_state == TcpConnection.UNHEALTHY:
+                assert old_state == TcpConnection.CONNECTED
+                self._good_connections.remove(conn)
+                self._bad_connections.append(conn)
+            else:  # TcpConnection.CLOSED
+                if old_state == TcpConnection.CONNECTED:
+                    self._good_connections.remove(conn)
+                else:  # TcpConnection.UNHEALTHY
+                    self._bad_connections.remove(conn)
+        except:
+            assert False
+            raise
 
     def resolve_addr(self, addr):
         if isinstance(addr, (list, set, tuple)):
@@ -512,7 +552,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
     def CallMethod(self, method_descriptor, rpc_controller,
                    request, response_class, done):
         flow_id = self._get_flow_id()
-        conn = self._balancer.get_connection_for_req(flow_id, request, self._connections)
+        conn = self._balancer.get_connection_for_req(flow_id, request, self._good_connections)
 
         if done is None:
             res = gevent.event.AsyncResult()
