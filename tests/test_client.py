@@ -3,12 +3,17 @@ from test_proto import test_pb2
 import sys
 import gevent.event
 import gevent
+import psutil
+import GreenletProfiler
 
 
 def main():
     if len(sys.argv) < 3:
         print 'Usage: %s REQ_PER_SEC SERVER_ADDR' % sys.argv[0]
         sys.exit(1)
+
+    p = psutil.Process()
+    p.set_cpu_affinity([2])
 
     req_num, server_addr = int(sys.argv[1]), sys.argv[2]
     client = rpc.RpcClient()
@@ -46,4 +51,13 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    GreenletProfiler.set_clock_type('cpu')
+    GreenletProfiler.start()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print 'client got SIGINT, exit.'
+    GreenletProfiler.stop()
+    stats = GreenletProfiler.get_func_stats()
+    #stats.print_all()
+    stats.save('client.profile', type='pstat')

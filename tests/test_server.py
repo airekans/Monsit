@@ -1,5 +1,7 @@
 from monsit import rpc
 from test_proto import test_pb2
+import psutil
+import GreenletProfiler
 
 
 class TestServiceImpl(test_pb2.TestService):
@@ -9,6 +11,9 @@ class TestServiceImpl(test_pb2.TestService):
 
 
 def main():
+    p = psutil.Process()
+    p.set_cpu_affinity([1])
+
     server = rpc.RpcServer(('0.0.0.0', 54321))
     server.register_service(TestServiceImpl())
     try:
@@ -19,3 +24,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
