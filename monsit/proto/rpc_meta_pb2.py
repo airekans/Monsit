@@ -3,6 +3,8 @@
 from google.protobuf import descriptor
 from google.protobuf import message
 from google.protobuf import reflection
+from google.protobuf import service
+from google.protobuf import service_reflection
 from google.protobuf import descriptor_pb2
 # @@protoc_insertion_point(imports)
 
@@ -11,7 +13,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='rpc_meta.proto',
   package='rpc',
-  serialized_pb='\n\x0erpc_meta.proto\x12\x03rpc\"k\n\x08MetaInfo\x12\x0f\n\x07\x66low_id\x18\x01 \x02(\x05\x12\x14\n\x0cservice_name\x18\x02 \x02(\t\x12\x13\n\x0bmethod_name\x18\x03 \x02(\t\x12\x10\n\x08msg_name\x18\x04 \x02(\t\x12\x11\n\thas_error\x18\x1e \x01(\x08\"B\n\rErrorResponse\x12 \n\x08\x65rr_code\x18\x01 \x02(\x0e\x32\x0e.rpc.ErrorCode\x12\x0f\n\x07\x65rr_msg\x18\x02 \x02(\t*N\n\tErrorCode\x12\x0b\n\x07SUCCESS\x10\x00\x12\x18\n\x14SERVER_SERVICE_ERROR\x10\x01\x12\x1a\n\x16SERVER_SERVICE_TIMEOUT\x10\x02')
+  serialized_pb='\n\x0erpc_meta.proto\x12\x03rpc\"k\n\x08MetaInfo\x12\x0f\n\x07\x66low_id\x18\x01 \x02(\x05\x12\x14\n\x0cservice_name\x18\x02 \x02(\t\x12\x13\n\x0bmethod_name\x18\x03 \x02(\t\x12\x10\n\x08msg_name\x18\x04 \x02(\t\x12\x11\n\thas_error\x18\x1e \x01(\x08\"B\n\rErrorResponse\x12 \n\x08\x65rr_code\x18\x01 \x02(\x0e\x32\x0e.rpc.ErrorCode\x12\x0f\n\x07\x65rr_msg\x18\x02 \x02(\t\"%\n\x10HeartBeatRequest\x12\x11\n\tmagic_num\x18\x01 \x02(\x05\"(\n\x11HeartBeatResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05*N\n\tErrorCode\x12\x0b\n\x07SUCCESS\x10\x00\x12\x18\n\x14SERVER_SERVICE_ERROR\x10\x01\x12\x1a\n\x16SERVER_SERVICE_TIMEOUT\x10\x02\x32L\n\x0e\x42uiltinService\x12:\n\tHeartBeat\x12\x15.rpc.HeartBeatRequest\x1a\x16.rpc.HeartBeatResponseB\x03\x90\x01\x01')
 
 _ERRORCODE = descriptor.EnumDescriptor(
   name='ErrorCode',
@@ -34,8 +36,8 @@ _ERRORCODE = descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=200,
-  serialized_end=278,
+  serialized_start=281,
+  serialized_end=359,
 )
 
 
@@ -135,9 +137,67 @@ _ERRORRESPONSE = descriptor.Descriptor(
   serialized_end=198,
 )
 
+
+_HEARTBEATREQUEST = descriptor.Descriptor(
+  name='HeartBeatRequest',
+  full_name='rpc.HeartBeatRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    descriptor.FieldDescriptor(
+      name='magic_num', full_name='rpc.HeartBeatRequest.magic_num', index=0,
+      number=1, type=5, cpp_type=1, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=200,
+  serialized_end=237,
+)
+
+
+_HEARTBEATRESPONSE = descriptor.Descriptor(
+  name='HeartBeatResponse',
+  full_name='rpc.HeartBeatResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    descriptor.FieldDescriptor(
+      name='return_code', full_name='rpc.HeartBeatResponse.return_code', index=0,
+      number=1, type=5, cpp_type=1, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=239,
+  serialized_end=279,
+)
+
 _ERRORRESPONSE.fields_by_name['err_code'].enum_type = _ERRORCODE
 DESCRIPTOR.message_types_by_name['MetaInfo'] = _METAINFO
 DESCRIPTOR.message_types_by_name['ErrorResponse'] = _ERRORRESPONSE
+DESCRIPTOR.message_types_by_name['HeartBeatRequest'] = _HEARTBEATREQUEST
+DESCRIPTOR.message_types_by_name['HeartBeatResponse'] = _HEARTBEATRESPONSE
 
 class MetaInfo(message.Message):
   __metaclass__ = reflection.GeneratedProtocolMessageType
@@ -150,5 +210,45 @@ class ErrorResponse(message.Message):
   DESCRIPTOR = _ERRORRESPONSE
   
   # @@protoc_insertion_point(class_scope:rpc.ErrorResponse)
+
+class HeartBeatRequest(message.Message):
+  __metaclass__ = reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _HEARTBEATREQUEST
+  
+  # @@protoc_insertion_point(class_scope:rpc.HeartBeatRequest)
+
+class HeartBeatResponse(message.Message):
+  __metaclass__ = reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _HEARTBEATRESPONSE
+  
+  # @@protoc_insertion_point(class_scope:rpc.HeartBeatResponse)
+
+
+_BUILTINSERVICE = descriptor.ServiceDescriptor(
+  name='BuiltinService',
+  full_name='rpc.BuiltinService',
+  file=DESCRIPTOR,
+  index=0,
+  options=None,
+  serialized_start=361,
+  serialized_end=437,
+  methods=[
+  descriptor.MethodDescriptor(
+    name='HeartBeat',
+    full_name='rpc.BuiltinService.HeartBeat',
+    index=0,
+    containing_service=None,
+    input_type=_HEARTBEATREQUEST,
+    output_type=_HEARTBEATRESPONSE,
+    options=None,
+  ),
+])
+
+class BuiltinService(service.Service):
+  __metaclass__ = service_reflection.GeneratedServiceType
+  DESCRIPTOR = _BUILTINSERVICE
+class BuiltinService_Stub(BuiltinService):
+  __metaclass__ = service_reflection.GeneratedServiceStubType
+  DESCRIPTOR = _BUILTINSERVICE
 
 # @@protoc_insertion_point(module_scope)

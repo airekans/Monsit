@@ -68,16 +68,22 @@ class FakeTcpConnection(rpc.TcpConnection):
 
     socket_class = FakeTcpSocket
 
-    def __init__(self, addr, recv_content, evt_listener=None, load_balancer=None,
+    def __init__(self, addr, recv_content, get_flow_func=None,
+                 evt_listener=None, load_balancer=None,
                  spawn=None, send_task_num=0, avg_delay=0):
         if evt_listener is None:
             evt_listener = self.fake_state_evt_listener
-        rpc.TcpConnection.__init__(self, addr, evt_listener,
+        if get_flow_func is None:
+            get_flow_func = self.fake_get_flow_func
+        rpc.TcpConnection.__init__(self, addr, evt_listener, get_flow_func,
                                    FakeTcpConnection.socket_class, spawn=fake_spawn)
         self._send_task_num = send_task_num
         self._avg_delay_per_min = avg_delay
 
     def fake_state_evt_listener(self, *args, **kwargs):
+        pass
+
+    def fake_get_flow_func(self):
         pass
 
     def get_socket(self):
@@ -93,7 +99,7 @@ class FakeTcpConnection(rpc.TcpConnection):
 class FakeTcpChannel(rpc.TcpChannel):
 
     def __init__(self, addr, spawn, recv_content=''):
-        conn_creator = lambda ad, listener, spawn: \
+        conn_creator = lambda ad, listener, get_flow_func, spawn: \
             FakeTcpConnection(ad, recv_content, evt_listener=listener)
         rpc.TcpChannel.__init__(self, addr,
                                 conn_class=conn_creator)

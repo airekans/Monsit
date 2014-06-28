@@ -235,10 +235,11 @@ class TcpConnection(object):
     CONNECTED = 1
     UNHEALTHY = 2
 
-    def __init__(self, addr, state_evt_listener,
+    def __init__(self, addr, state_evt_listener, get_flow_func,
                  socket_cls=gevent.socket.socket, spawn=gevent.spawn):
         self._state = TcpConnection.CLOSED
         self._state_evt_listener = state_evt_listener
+        self._get_flow_func = get_flow_func
         self._addr = addr
         self._spawn = spawn
         self._socket = socket_cls()
@@ -248,7 +249,7 @@ class TcpConnection(object):
         self._recv_infos = {}
         self._timeout_queue = []
         self._workers = [gevent.spawn(self.send_loop), gevent.spawn(self.recv_loop),
-                         gevent.spawn(self.timeout_loop)]
+                         gevent.spawn(self.timeout_loop), gevent.spawn(self.heartbeat_loop)]
 
         self._stat = TcpConnectionStat()
 
@@ -330,6 +331,33 @@ class TcpConnection(object):
                         logging.warning(err_msg)
                         del self._recv_infos[flow_id]
                         self._finish_rpc(done, rpc_controller, None, req_data.is_async)
+
+    def heartbeat_loop(self):
+        service_descriptor = rpc_meta_pb2.BuiltinService_Stub.GetDescriptor()
+        method_descriptor = service_descriptor.FindMethodByName('HeartBeat')
+        request = rpc_meta_pb2.HeartBeatRequest(magic_num=4231)
+        response_class = rpc_meta_pb2.HeartBeatResponse
+        hb_fail_count = 0
+
+        while True:
+            gevent.sleep(30)  # heartbeat every 30 sec
+
+            res = gevent.event.AsyncResult()
+            flow_id = self._get_flow_func()
+            rpc_controller = RpcController(method_timeout=3)
+            done = lambda _, rsp: res.set(rsp)
+            self.add_send_task(flow_id, method_descriptor, rpc_controller,
+                               request, response_class, done,
+                               self._RequestData(False))
+            hb_rsp = res.get()
+            if hb_rsp is None:
+                logging.error('connection heartbeat timeout')
+                hb_fail_count += 1
+                if hb_fail_count >= 3:
+                    self.change_state(TcpConnection.UNHEALTHY)
+            else:
+                hb_fail_count = 0
+                self.change_state(TcpConnection.CONNECTED)
 
     def recv_loop(self):
         while True:
@@ -473,7 +501,8 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         self._good_connections = []
         self._bad_connections = []
         for ip_port in self.resolve_addr(addr):
-            conn_class(ip_port, self.on_conn_state_changed, spawn=spawn)
+            conn_class(ip_port, self.on_conn_state_changed,
+                       self._get_flow_id, spawn=spawn)
             # no need to add conn because it will
             # add itself in state_changed function.
 
@@ -677,6 +706,8 @@ class RpcServer(object):
         self._stream_server = gevent.server.StreamServer(self._addr,
                                                          self._handle_connection)
 
+        self._register_builtin_services()
+
     def _handle_connection(self, socket, addr):
         socket.setsockopt(gevent.socket.SOL_TCP, gevent.socket.TCP_NODELAY, 1)
         socket.setsockopt(gevent.socket.IPPROTO_TCP, gevent.socket.TCP_NODELAY, 1)
@@ -792,6 +823,9 @@ class RpcServer(object):
 
     def register_service(self, service):
         self._services[service.GetDescriptor().full_name] = service
+
+    def _register_builtin_services(self):
+        self.register_service(rpc_meta_pb2.BuiltinService())
 
     def print_stat(self, interval):
         while True:

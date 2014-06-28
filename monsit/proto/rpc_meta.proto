@@ -1,5 +1,7 @@
 package rpc;
 
+option py_generic_services = true;
+
 enum ErrorCode {
   SUCCESS = 0;
   SERVER_SERVICE_ERROR = 1;
@@ -17,4 +19,16 @@ message MetaInfo {
 message ErrorResponse {
     required ErrorCode err_code = 1;
     required string err_msg = 2;
+}
+
+message HeartBeatRequest {
+    required int32 magic_num = 1;
+}
+
+message HeartBeatResponse {
+    required int32 return_code = 1;
+}
+
+service BuiltinService {
+  rpc HeartBeat (HeartBeatRequest) returns (HeartBeatResponse);
 }
