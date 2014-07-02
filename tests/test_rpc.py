@@ -70,7 +70,8 @@ class FakeTcpConnection(rpc.TcpConnection):
 
     def __init__(self, addr, recv_content, get_flow_func=None,
                  evt_listener=None, load_balancer=None,
-                 spawn=None, send_task_num=0, avg_delay=0):
+                 spawn=None, send_task_num=0, avg_delay=0,
+                 heartbeat_interval=30):
         if evt_listener is None:
             evt_listener = self.fake_state_evt_listener
         if get_flow_func is None:
@@ -79,6 +80,7 @@ class FakeTcpConnection(rpc.TcpConnection):
                                    FakeTcpConnection.socket_class, spawn=fake_spawn)
         self._send_task_num = send_task_num
         self._avg_delay_per_min = avg_delay
+        self._heartbeat_interval = heartbeat_interval
 
     def fake_state_evt_listener(self, *args, **kwargs):
         pass
@@ -95,12 +97,17 @@ class FakeTcpConnection(rpc.TcpConnection):
     def get_avg_delay_per_min(self):
         return self._avg_delay_per_min
 
+    def set_heartbeat_interval(self, interval):
+        self._heartbeat_interval = interval
+
 
 class FakeTcpChannel(rpc.TcpChannel):
 
-    def __init__(self, addr, spawn, recv_content=''):
+    def __init__(self, addr, spawn, recv_content='', heartbeat_interval=30):
         conn_creator = lambda ad, listener, get_flow_func, spawn: \
-            FakeTcpConnection(ad, recv_content, evt_listener=listener)
+            FakeTcpConnection(ad, recv_content, evt_listener=listener,
+                              get_flow_func=self._get_flow_id,
+                              heartbeat_interval=heartbeat_interval)
         rpc.TcpChannel.__init__(self, addr,
                                 conn_class=conn_creator)
         self.socket = self._good_connections[0].get_socket()
@@ -456,6 +463,25 @@ class TcpChannelTest(unittest.TestCase):
         self.assertEqual(1, len(actual_rsp))
         self.assertEqual(rsp, actual_rsp[0], str(actual_rsp))
         self.assertFalse(controller.Failed())
+
+    def test_connection_heartbeat(self):
+        channel = FakeTcpChannel('127.0.0.1:11111', None, recv_content="",
+                                 heartbeat_interval=2)
+        self.assertTrue(self.channel.get_socket().is_connected())
+        socket = channel.get_socket()
+
+        self.service_descriptor = rpc_meta_pb2.BuiltinService.GetDescriptor()
+        self.method = self.service_descriptor.FindMethodByName('HeartBeat')
+
+        req = rpc_meta_pb2.HeartBeatRequest(magic_num=4231)
+        serialized_request = self.get_serialize_message(0, req)
+        rsp = rpc_meta_pb2.HeartBeatResponse(return_code=0)
+        serialized_response = self.get_serialize_message(0, rsp)
+        socket.set_recv_content(serialized_response)
+
+        gevent.sleep(3)
+        self.assertEqual(serialized_request, socket.get_send_content())
+        self.assertEqual(1, channel.get_flow_id())
 
     def test_resolve_addr_with_single_addr(self):
         expected_addrs = [('127.0.0.1', 30012)]

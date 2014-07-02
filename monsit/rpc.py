@@ -242,6 +242,7 @@ class TcpConnection(object):
         self._get_flow_func = get_flow_func
         self._addr = addr
         self._spawn = spawn
+        self._heartbeat_interval = 30
         self._socket = socket_cls()
         self.connect()  # this may cause problem
 
@@ -340,7 +341,7 @@ class TcpConnection(object):
         hb_fail_count = 0
 
         while True:
-            gevent.sleep(30)  # heartbeat every 30 sec
+            gevent.sleep(self._heartbeat_interval)
 
             res = gevent.event.AsyncResult()
             flow_id = self._get_flow_func()
