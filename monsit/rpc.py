@@ -618,8 +618,12 @@ class RpcClient(object):
         self._pool = Pool(pool_size)
 
     def __del__(self):
+        self.close()
+
+    def close(self):
         for channel in self._channels.itervalues():
             channel.close()
+        self._channels.clear()
 
         self._pool.join()
 

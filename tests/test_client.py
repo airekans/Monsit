@@ -37,17 +37,20 @@ def main():
         if rsp:
             recv_rsp_num[0] += 1
 
-    while True:
-        event.wait()
-        event.clear()
-        print 'sent_req_num', sent_req_num, 'recv_rsp_num', recv_rsp_num[0]
-        sent_req_num, recv_rsp_num[0] = 0, 0
+    try:
+        while True:
+            event.wait()
+            event.clear()
+            print 'sent_req_num', sent_req_num, 'recv_rsp_num', recv_rsp_num[0]
+            sent_req_num, recv_rsp_num[0] = 0, 0
 
-        for _ in xrange(req_num):
-            controller = rpc.RpcController()
-            stub.TestMethod(controller, req, done)
+            for _ in xrange(req_num):
+                controller = rpc.RpcController()
+                stub.TestMethod(controller, req, done)
 
-        sent_req_num = req_num
+            sent_req_num = req_num
+    finally:
+        client.close()
 
 
 if __name__ == '__main__':
