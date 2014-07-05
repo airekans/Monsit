@@ -483,6 +483,16 @@ class TcpChannelTest(unittest.TestCase):
         self.assertEqual(serialized_request, socket.get_send_content())
         self.assertEqual(1, channel.get_flow_id())
 
+    def test_connection_heartbeat_fail(self):
+        channel = FakeTcpChannel('127.0.0.1:11111', None, recv_content="",
+                                 heartbeat_interval=1)
+        self.assertTrue(self.channel.get_socket().is_connected())
+        good_conns = channel.get_connections()
+        self.assertEqual(1, len(good_conns))
+
+        gevent.sleep(4)
+        self.assertEqual(0, len(good_conns))
+
     def test_resolve_addr_with_single_addr(self):
         expected_addrs = [('127.0.0.1', 30012)]
         addrs = self.channel.resolve_addr('127.0.0.1:30012')
@@ -534,6 +544,7 @@ class FakeRpcServer(rpc.RpcServer):
         self._stat = rpc.RpcServerStat()
         self._pool = None
         self._spawn = gevent.spawn
+        self._register_builtin_services()
         # not calling parent's __init__ to bypass the StreamServer init
 
     def set_service_timeout(self, service_timeout):
@@ -697,6 +708,29 @@ class RpcServerTest(unittest.TestCase):
 
         socket.close()
         t.join()
+
+    def test_handle_heartbeat(self):
+        req = rpc_meta_pb2.HeartBeatRequest(magic_num=4321)
+        rsp = rpc_meta_pb2.HeartBeatResponse(return_code=0)
+        service_desc = rpc_meta_pb2.BuiltinService.GetDescriptor()
+        method_desc = service_desc.FindMethodByName('HeartBeat')
+        serialized_req = self.get_serialize_message(1, service_desc,
+                                                    method_desc.name, req)
+        serialized_rsp = self.get_serialize_message(1, service_desc,
+                                                    method_desc.name, rsp)
+
+        socket = FakeTcpSocket(is_client=False)
+        socket.connect(('127.0.0.1', 34567))
+        socket.set_recv_content(serialized_req)
+
+        t = gevent.spawn(self.server.handle_connection, socket, ('127.0.0.1', 34567))
+        gevent.sleep(1)
+        actual_serialized_rsp = socket.get_send_content()
+        self.assertEqual(serialized_rsp, actual_serialized_rsp)
+
+        socket.close()
+        t.join()
+
 
 if __name__ == '__main__':
     unittest.main()

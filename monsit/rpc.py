@@ -52,6 +52,17 @@ class Pool(object):
         self._pool.kill()
 
 
+class BuiltinServiceImpl(rpc_meta_pb2.BuiltinService):
+    def HeartBeat(self, rpc_controller, request, done):
+        rsp = rpc_meta_pb2.HeartBeatResponse()
+        if request.magic_num == 4321:
+            rsp.return_code = 0
+        else:
+            rsp.return_code = 1
+
+        return rsp
+
+
 class RpcController(google.protobuf.service.RpcController):
     SUCCESS = 0
     SERVICE_TIMEOUT = 100
@@ -826,7 +837,7 @@ class RpcServer(object):
         self._services[service.GetDescriptor().full_name] = service
 
     def _register_builtin_services(self):
-        self.register_service(rpc_meta_pb2.BuiltinService())
+        self.register_service(BuiltinServiceImpl())
 
     def print_stat(self, interval):
         while True:
