@@ -6,15 +6,19 @@ import gevent
 
 
 class FakeTcpSocket(object):
-    def __init__(self, is_client=True, send_func=None):
+    def __init__(self, is_client=True, send_func=None, recv_func=None):
         self.__recv_content = ""
         self.__send_content = ""
         self.__is_connected = False
         self.__is_client = is_client
         self._send_func = self._send if send_func is None else send_func
+        self._recv_func = self._recv if recv_func is None else recv_func
 
     def set_send_func(self, send_func):
         self._send_func = send_func
+
+    def set_recv_func(self, recv_func):
+        self._recv_func = recv_func
 
     def set_is_client(self, is_client):
         self.__is_client = is_client
@@ -32,6 +36,9 @@ class FakeTcpSocket(object):
         return self.__is_connected
 
     def recv(self, size):
+        return self._recv_func(size)
+
+    def _recv(self, size):
         if self.__is_client:
             while len(self.__send_content) == 0: # not recv anything
                 gevent.sleep(0)
@@ -393,6 +400,24 @@ class TcpChannelTest(unittest.TestCase):
         self.assertIsNone(actual_rsp)
         self.assertTrue(controller.Failed())
         self.assertEqual(rpc.RpcController.SERVER_CLOSE_CONN_ERROR, controller.err_code)
+
+    def test_CallMethodWithExceptionInRecv(self):
+        channel = self.channel
+        self.assertEqual(0, channel.get_flow_id())
+        self.assertEqual(1, len(channel.get_connections()))
+
+        def recv_exception(size):
+            raise RuntimeError
+
+        channel.get_socket().set_recv_func(recv_exception)
+
+        controller = rpc.RpcController()
+
+        actual_rsp = channel.CallMethod(self.method, controller,
+                                        self.request, self.response_class, None)
+
+        self.assertIsNone(actual_rsp)
+        self.assertEqual(0, len(channel.get_connections()))
 
     def test_CallMethodWithWrongMetaInfo(self):
         channel = self.channel

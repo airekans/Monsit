@@ -372,11 +372,12 @@ class TcpConnection(object):
                 self.change_state(TcpConnection.CONNECTED)
 
     def recv_loop(self):
-        while True:
-            if not self.recv_rsp():
-                break
-
-        self.close()
+        try:
+            while True:
+                if not self.recv_rsp():
+                    break
+        finally:
+            self.close()
 
     def send_loop(self):
         while True:
@@ -422,7 +423,7 @@ class TcpConnection(object):
                 recv_buf += buf
             except Exception, e:
                 logging.warning('recv failed: ' + str(e))
-                break
+                raise
 
         return recv_buf
 
