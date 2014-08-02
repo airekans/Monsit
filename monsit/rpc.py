@@ -255,6 +255,7 @@ class TcpConnection(object):
         self._spawn = spawn
         self._heartbeat_interval = 30
         self._socket = socket_cls()
+        self._is_closed = False
         self.connect()  # this may cause problem
 
         self._send_task_queue = gevent.queue.Queue()
@@ -272,7 +273,12 @@ class TcpConnection(object):
         self.change_state(TcpConnection.CONNECTED)
 
     def close(self):
+        if self._is_closed:
+            logging.warning('conn is closed')
+            return
+
         self._socket.close()
+        self._is_closed = True
         self.change_state(TcpConnection.CLOSED)
 
         # clear all data
@@ -282,6 +288,8 @@ class TcpConnection(object):
                 self._send_task_queue.get_nowait()
             except gevent.queue.Empty:
                 pass
+
+        self._timeout_queue = []
 
         # check if there is any request has not been processed.
         for v in self._recv_infos.itervalues():
@@ -376,13 +384,16 @@ class TcpConnection(object):
             while True:
                 if not self.recv_rsp():
                     break
+        except Exception, e:
+            logging.warning('recv_loop failed and exit: ' + str(e))
         finally:
             self.close()
 
     def send_loop(self):
         while True:
             send_task = self._send_task_queue.get()
-            send_task()
+            if not send_task():
+                break
 
     def send_req(self, flow_id, method_descriptor, rpc_controller,
                  request, response_class, done, req_data):
@@ -403,7 +414,7 @@ class TcpConnection(object):
             self._finish_rpc(done, rpc_controller, None, req_data.is_async)
 
             self.close()
-            return
+            return False
 
         req_data.begin_time = time.time()
         self._recv_infos[flow_id] = (meta_info, rpc_controller, response_class, done, req_data)
@@ -411,6 +422,8 @@ class TcpConnection(object):
         if rpc_controller.method_timeout > 0:
             heapq.heappush(self._timeout_queue,
                            (req_data.begin_time + rpc_controller.method_timeout, flow_id))
+
+        return True
 
     def _recv(self, expected_size):
         recv_buf = ''
