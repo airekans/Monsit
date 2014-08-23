@@ -153,14 +153,14 @@ class LoadBalancerTest(unittest.TestCase):
             pass
 
     def test_IncLoadBalancerWithSingleConn(self):
-        balancer = rpc.IncLoadBalancer()
+        balancer = rpc.FixedLoadBalancer()
         conns = [FakeTcpConnection('127.0.0.1:11111', '')]
         for flow_id in xrange(10):
             conn = balancer.get_connection_for_req(flow_id, self.req, conns)
             self.assertIs(conn, conns[0])
 
     def test_IncLoadBalancerWithMultipleConns(self):
-        balancer = rpc.IncLoadBalancer()
+        balancer = rpc.FixedLoadBalancer()
         conns = [FakeTcpConnection('127.0.0.1:11111', ''),
                  FakeTcpConnection('127.0.0.1:11112', ''),
                  FakeTcpConnection('127.0.0.1:11112', '')]
@@ -488,6 +488,49 @@ class TcpChannelTest(unittest.TestCase):
         self.assertEqual(1, len(actual_rsp))
         self.assertEqual(rsp, actual_rsp[0], str(actual_rsp))
         self.assertFalse(controller.Failed())
+
+    def test_CallMethodWithUserFlowId(self):
+        class TestUserFlowIdTcpChannel(FakeTcpChannel):
+            def _call_method_on_conn(self, conn, flow_id, _m, _r,
+                                     _req, _rsp, _done):
+                self.user_conn = conn
+
+        addrs = ('127.0.0.1:11111', '127.0.0.1:11112')
+        channel = TestUserFlowIdTcpChannel(addrs, None, recv_content="")
+        self.assertEqual(0, channel.get_flow_id())
+        conns = channel.get_connections()
+        self.assertEqual(len(addrs), len(conns))
+
+        controller = rpc.RpcController()
+        res = channel.CallMethod(self.method, controller,
+                                 self.request, self.response_class, None)
+        self.assertIsNone(res)
+        self.assertEqual(1, channel.get_flow_id())
+        self.assertIs(conns[0], channel.user_conn)
+
+        # call again and the conn should change
+        controller = rpc.RpcController()
+        res = channel.CallMethod(self.method, controller,
+                                 self.request, self.response_class, None)
+        self.assertIsNone(res)
+        self.assertEqual(2, channel.get_flow_id())
+        self.assertIs(conns[1], channel.user_conn)
+
+        # call with user defined flow id
+        controller = rpc.RpcController(flow_id=3)
+        res = channel.CallMethod(self.method, controller,
+                                 self.request, self.response_class, None)
+        self.assertIsNone(res)
+        self.assertEqual(3, channel.get_flow_id())
+        self.assertIs(conns[1], channel.user_conn)
+
+        # call again and the conn should be the same
+        controller = rpc.RpcController(flow_id=3)
+        res = channel.CallMethod(self.method, controller,
+                                 self.request, self.response_class, None)
+        self.assertIsNone(res)
+        self.assertEqual(4, channel.get_flow_id())
+        self.assertIs(conns[1], channel.user_conn)
 
     def test_connection_heartbeat(self):
         channel = FakeTcpChannel('127.0.0.1:11111', None, recv_content="",

@@ -71,10 +71,11 @@ class RpcController(google.protobuf.service.RpcController):
     WRONG_MSG_NAME_ERROR = 103
     SERVER_CLOSE_CONN_ERROR = 104
 
-    def __init__(self, method_timeout=0):
+    def __init__(self, method_timeout=0, flow_id=None):
         self.err_code = RpcController.SUCCESS
         self.err_msg = None
         self.method_timeout = method_timeout
+        self._flow_id = flow_id
 
     def Reset(self):
         self.err_code = RpcController.SUCCESS
@@ -88,6 +89,13 @@ class RpcController(google.protobuf.service.RpcController):
 
     def SetFailed(self, reason):
         self.err_code, self.err_msg = reason
+
+    def SetFlowId(self, flow_id):
+        assert isinstance(flow_id, int)
+        self._flow_id = flow_id
+
+    def GetFlowId(self):
+        return self._flow_id
 
 
 def _serialize_message(meta_info, msg):
@@ -143,7 +151,7 @@ class SingleConnLoadBalancer(LoadBalancerBase):
         return conns[0]
 
 
-class IncLoadBalancer(LoadBalancerBase):
+class FixedLoadBalancer(LoadBalancerBase):
     def get_connection_for_req(self, flow_id, req, conns):
         return conns[flow_id % len(conns)]
 
@@ -518,6 +526,8 @@ class TcpConnection(object):
 
 class TcpChannel(google.protobuf.service.RpcChannel):
 
+    _fixed_load_balancer = FixedLoadBalancer()
+
     def __init__(self, addr, conn_class=TcpConnection, load_balancer=None,
                  spawn=gevent.spawn):
         google.protobuf.service.RpcChannel.__init__(self)
@@ -537,7 +547,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         elif load_balancer is not None:
             self._balancer = load_balancer
         else:
-            self._balancer = IncLoadBalancer()
+            self._balancer = TcpChannel._fixed_load_balancer
         logging.info('use %s as load balancer' % self._balancer.__class__.__name__)
 
     def __del__(self):
@@ -602,13 +612,8 @@ class TcpChannel(google.protobuf.service.RpcChannel):
                 else:
                     raise NotImplementedError
 
-    # when done is None, it means the method call is synchronous
-    # when it's not None, it means the call is asynchronous
-    def CallMethod(self, method_descriptor, rpc_controller,
-                   request, response_class, done):
-        flow_id = self._get_flow_id()
-        conn = self._balancer.get_connection_for_req(flow_id, request, self._good_connections)
-
+    def _call_method_on_conn(self, conn, flow_id, method_descriptor,
+                             rpc_controller, request, response_class, done):
         if done is None:
             res = gevent.event.AsyncResult()
             done = lambda _, rsp: res.set(rsp)
@@ -621,6 +626,23 @@ class TcpChannel(google.protobuf.service.RpcChannel):
                                request, response_class, done,
                                TcpConnection._RequestData(True))
             return None
+
+    # when done is None, it means the method call is synchronous
+    # when it's not None, it means the call is asynchronous
+    def CallMethod(self, method_descriptor, rpc_controller,
+                   request, response_class, done):
+        flow_id = self._get_flow_id()
+        conn_flow_id = flow_id
+        user_flow_id = rpc_controller.GetFlowId()
+        balancer = self._balancer
+        if user_flow_id is not None:
+            conn_flow_id = user_flow_id
+            balancer = TcpChannel._fixed_load_balancer
+        conn = balancer.get_connection_for_req(conn_flow_id, request, self._good_connections)
+
+        return self._call_method_on_conn(conn, flow_id, method_descriptor,
+                                         rpc_controller, request,
+                                         response_class, done)
 
 
 class RpcClient(object):
