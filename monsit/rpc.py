@@ -240,14 +240,19 @@ class TcpConnectionStat(object):
 
 class TcpConnection(object):
 
+    socket_cls = gevent.socket.socket
+
     class Exception(Exception):
         def __init__(self, err_code, err_msg):
             self.err_code, self.err_msg = err_code, err_msg
 
-    class _RequestData(object):
-        def __init__(self, is_async):
+    class RequestData(object):
+        def __init__(self, is_async, *call_args):
             self.begin_time = 0
             self.is_async = is_async
+            self.call_args = call_args
+            self.rpc_controller = call_args[2]
+            self.req_msg = call_args[3]
 
     # state enumeration definition
     CLOSED = 0
@@ -255,16 +260,16 @@ class TcpConnection(object):
     UNHEALTHY = 2
 
     def __init__(self, addr, state_evt_listener, get_flow_func,
-                 socket_cls=gevent.socket.socket, spawn=gevent.spawn):
+                 spawn=gevent.spawn):
         self._state = TcpConnection.CLOSED
         self._state_evt_listener = state_evt_listener
         self._get_flow_func = get_flow_func
         self._addr = addr
         self._spawn = spawn
         self._heartbeat_interval = 30
-        self._socket = socket_cls()
+        self._socket = TcpConnection.socket_cls()
         self._is_closed = False
-        self.connect()  # this may cause problem
+        self.connect()  # TODO: this may cause problem
 
         self._send_task_queue = gevent.queue.Queue()
         self._recv_infos = {}
@@ -318,6 +323,25 @@ class TcpConnection(object):
             self._state = state
             self._state_evt_listener(self, old_state, state)
 
+    # when change to unhealthy state,
+    # TcpChannel will call this functions to get all
+    # unsent task to dispatch to other good connections.
+    def get_unsent_tasks(self):
+        unsent_tasks = []
+        while not self._send_task_queue.empty():
+            try:
+                task = self._send_task_queue.get_nowait()
+                req_data = task.req_data
+                # all heartbeat requests and request targetting only to this
+                # connection should not be sent in other connections
+                if not isinstance(req_data.req_msg, rpc_meta_pb2.HeartBeatRequest) and \
+                    req_data.rpc_controller.GetFlowId() is None:
+                    unsent_tasks.append((req_data.is_async, req_data.call_args))
+            except gevent.queue.Empty:
+                pass
+
+        return unsent_tasks
+
     def get_stat(self):
         return self._stat
 
@@ -329,9 +353,11 @@ class TcpConnection(object):
 
     def add_send_task(self, flow_id, method_descriptor, rpc_controller,
                       request, response_class, done, req_data):
-        self._send_task_queue.put_nowait(
-            lambda: self.send_req(flow_id, method_descriptor, rpc_controller,
-                                  request, response_class, done, req_data))
+        send_task = lambda: self.send_req(flow_id, method_descriptor, rpc_controller,
+                                          request, response_class, done, req_data)
+        send_task.req_data = req_data
+
+        self._send_task_queue.put_nowait(send_task)
 
     def _finish_rpc(self, done, controller, rsp, is_async):
         if is_async:
@@ -374,9 +400,11 @@ class TcpConnection(object):
             flow_id = self._get_flow_func()
             rpc_controller = RpcController(method_timeout=3)
             done = lambda _, rsp: res.set(rsp)
+            req_data = self.RequestData(False, flow_id, method_descriptor, rpc_controller,
+                                        request, response_class, done)
             self.add_send_task(flow_id, method_descriptor, rpc_controller,
                                request, response_class, done,
-                               self._RequestData(False))
+                               req_data)
             hb_rsp = res.get()
             if hb_rsp is None:
                 logging.error('connection heartbeat timeout')
@@ -526,9 +554,10 @@ class TcpConnection(object):
 
 class TcpChannel(google.protobuf.service.RpcChannel):
 
+    conn_cls = TcpConnection
     _fixed_load_balancer = FixedLoadBalancer()
 
-    def __init__(self, addr, conn_class=TcpConnection, load_balancer=None,
+    def __init__(self, addr, load_balancer=None,
                  spawn=gevent.spawn):
         google.protobuf.service.RpcChannel.__init__(self)
         self._flow_id = 0
@@ -537,8 +566,8 @@ class TcpChannel(google.protobuf.service.RpcChannel):
         self._good_connections = []
         self._bad_connections = []
         for ip_port in self.resolve_addr(addr):
-            conn_class(ip_port, self.on_conn_state_changed,
-                       self._get_flow_id, spawn=spawn)
+            TcpChannel.conn_cls(ip_port, self.on_conn_state_changed,
+                                self._get_flow_id, spawn=spawn)
             # no need to add conn because it will
             # add itself in state_changed function.
 
@@ -572,6 +601,20 @@ class TcpChannel(google.protobuf.service.RpcChannel):
                 assert old_state == TcpConnection.CONNECTED
                 self._good_connections.remove(conn)
                 self._bad_connections.append(conn)
+
+                if len(self._good_connections) == 0:
+                    logging.warning('All connections in channel is unhealthy.')
+                else:
+                    unsent_tasks = conn.get_unsent_tasks()
+                    for is_async, call_args in unsent_tasks:
+                        (flow_id, method_descriptor,
+                          rpc_controller, request, response_class,
+                          done) = call_args
+                        conn = self._load_balance(flow_id, rpc_controller, request)
+                        self._call_method_on_conn(conn, flow_id, method_descriptor,
+                                                  rpc_controller, request, response_class,
+                                                  done, is_async)
+
             else:  # TcpConnection.CLOSED
                 if old_state == TcpConnection.CONNECTED:
                     self._good_connections.remove(conn)
@@ -613,25 +656,33 @@ class TcpChannel(google.protobuf.service.RpcChannel):
                     raise NotImplementedError
 
     def _call_method_on_conn(self, conn, flow_id, method_descriptor,
-                             rpc_controller, request, response_class, done):
-        if done is None:
+                             rpc_controller, request, response_class,
+                             done, is_async=None):
+        if is_async is not None:
+            req_data = TcpConnection.RequestData(is_async, flow_id,
+                                method_descriptor, rpc_controller,
+                                request, response_class, done)
+            conn.add_send_task(flow_id, method_descriptor, rpc_controller,
+                               request, response_class, done, req_data)
+            return None
+        elif done is None:
+            req_data = TcpConnection.RequestData(False, flow_id,
+                                method_descriptor, rpc_controller,
+                                request, response_class, done)
             res = gevent.event.AsyncResult()
             done = lambda _, rsp: res.set(rsp)
             conn.add_send_task(flow_id, method_descriptor, rpc_controller,
-                               request, response_class, done,
-                               TcpConnection._RequestData(False))
+                               request, response_class, done, req_data)
             return res.get()
         else:
+            req_data = TcpConnection.RequestData(True, flow_id,
+                                method_descriptor, rpc_controller,
+                                request, response_class, done)
             conn.add_send_task(flow_id, method_descriptor, rpc_controller,
-                               request, response_class, done,
-                               TcpConnection._RequestData(True))
+                               request, response_class, done, req_data)
             return None
 
-    # when done is None, it means the method call is synchronous
-    # when it's not None, it means the call is asynchronous
-    def CallMethod(self, method_descriptor, rpc_controller,
-                   request, response_class, done):
-        flow_id = self._get_flow_id()
+    def _load_balance(self, flow_id, rpc_controller, request):
         conn_flow_id = flow_id
         user_flow_id = rpc_controller.GetFlowId()
         balancer = self._balancer
@@ -639,6 +690,14 @@ class TcpChannel(google.protobuf.service.RpcChannel):
             conn_flow_id = user_flow_id
             balancer = TcpChannel._fixed_load_balancer
         conn = balancer.get_connection_for_req(conn_flow_id, request, self._good_connections)
+        return conn
+
+    # when done is None, it means the method call is synchronous
+    # when it's not None, it means the call is asynchronous
+    def CallMethod(self, method_descriptor, rpc_controller,
+                   request, response_class, done):
+        flow_id = self._get_flow_id()
+        conn = self._load_balance(flow_id, rpc_controller, request)
 
         return self._call_method_on_conn(conn, flow_id, method_descriptor,
                                          rpc_controller, request,
