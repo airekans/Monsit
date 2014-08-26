@@ -275,10 +275,13 @@ class TcpConnection(object):
         self._send_task_queue = gevent.queue.Queue()
         self._recv_infos = {}
         self._timeout_queue = []
-        self._workers = [gevent.spawn(self.send_loop), gevent.spawn(self.recv_loop),
-                         gevent.spawn(self.timeout_loop), gevent.spawn(self.heartbeat_loop)]
+        self._spawn_workers()
 
         self._stat = TcpConnectionStat()
+
+    def _spawn_workers(self):
+        self._workers = [gevent.spawn(self.send_loop), gevent.spawn(self.recv_loop),
+                         gevent.spawn(self.timeout_loop), gevent.spawn(self.heartbeat_loop)]
 
     def connect(self):
         self._socket.connect(self._addr)
@@ -316,7 +319,8 @@ class TcpConnection(object):
 
         # kill all workers in the last step, because if a worker calls this function,
         # the statements after this call will not be executed.
-        gevent.killall(self._workers)
+        if len(self._workers) > 0:
+            gevent.killall(self._workers)
 
     def change_state(self, state):
         if self._state != state:
