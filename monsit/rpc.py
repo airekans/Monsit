@@ -260,13 +260,14 @@ class TcpConnection(object):
     UNHEALTHY = 2
 
     def __init__(self, addr, state_evt_listener, get_flow_func,
-                 spawn=gevent.spawn):
+                 spawn=gevent.spawn, heartbeat_interval=30):
         self._state = TcpConnection.CLOSED
         self._state_evt_listener = state_evt_listener
         self._get_flow_func = get_flow_func
         self._addr = addr
         self._spawn = spawn
-        self._heartbeat_interval = 30
+        self._heartbeat_interval = heartbeat_interval
+        self._heartbeat_timeout = 3
         self._socket = TcpConnection.socket_cls()
         self._is_closed = False
         self.connect()  # TODO: this may cause problem
@@ -326,7 +327,7 @@ class TcpConnection(object):
     # when change to unhealthy state,
     # TcpChannel will call this functions to get all
     # unsent task to dispatch to other good connections.
-    def get_unsent_tasks(self):
+    def get_pending_send_tasks(self):
         unsent_tasks = []
         while not self._send_task_queue.empty():
             try:
@@ -340,6 +341,7 @@ class TcpConnection(object):
             except gevent.queue.Empty:
                 pass
 
+        logging.debug('unsent task num: %d' % len(unsent_tasks))
         return unsent_tasks
 
     def get_stat(self):
@@ -357,6 +359,9 @@ class TcpConnection(object):
                                           request, response_class, done, req_data)
         send_task.req_data = req_data
 
+        self._do_add_send_task(send_task)
+
+    def _do_add_send_task(self, send_task):
         self._send_task_queue.put_nowait(send_task)
 
     def _finish_rpc(self, done, controller, rsp, is_async):
@@ -398,7 +403,7 @@ class TcpConnection(object):
 
             res = gevent.event.AsyncResult()
             flow_id = self._get_flow_func()
-            rpc_controller = RpcController(method_timeout=3)
+            rpc_controller = RpcController(method_timeout=self._heartbeat_timeout)
             done = lambda _, rsp: res.set(rsp)
             req_data = self.RequestData(False, flow_id, method_descriptor, rpc_controller,
                                         request, response_class, done)
@@ -407,9 +412,10 @@ class TcpConnection(object):
                                req_data)
             hb_rsp = res.get()
             if hb_rsp is None:
-                logging.error('connection heartbeat timeout')
+                logging.warning('connection %s heartbeat timeout' % str(self._addr))
                 hb_fail_count += 1
                 if hb_fail_count >= 3:
+                    logging.warning('connection %s become unhealthy' % str(self._addr))
                     self.change_state(TcpConnection.UNHEALTHY)
             else:
                 hb_fail_count = 0
@@ -605,7 +611,7 @@ class TcpChannel(google.protobuf.service.RpcChannel):
                 if len(self._good_connections) == 0:
                     logging.warning('All connections in channel is unhealthy.')
                 else:
-                    unsent_tasks = conn.get_unsent_tasks()
+                    unsent_tasks = conn.get_pending_send_tasks()
                     for is_async, call_args in unsent_tasks:
                         (flow_id, method_descriptor,
                           rpc_controller, request, response_class,

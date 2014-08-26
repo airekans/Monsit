@@ -6,11 +6,17 @@ import gevent
 
 
 class FakeTcpSocket(object):
+
+    global_is_client = None
+
     def __init__(self, is_client=True, send_func=None, recv_func=None):
         self.__recv_content = ""
         self.__send_content = ""
         self.__is_connected = False
-        self.__is_client = is_client
+        if FakeTcpSocket.global_is_client is not None:
+            self.__is_client = FakeTcpSocket.global_is_client
+        else:
+            self.__is_client = is_client
         self._send_func = self._send if send_func is None else send_func
         self._recv_func = self._recv if recv_func is None else recv_func
 
@@ -47,6 +53,7 @@ class FakeTcpSocket(object):
             if not self.__is_client:
                 while self.__is_connected:
                     gevent.sleep(1)
+
             return ""
 
         buf = self.__recv_content[:size]
@@ -76,17 +83,17 @@ class FakeTcpConnection(rpc.TcpConnection):
     rpc.TcpConnection.socket_cls = FakeTcpSocket
 
     def __init__(self, addr, evt_listener=None, get_flow_func=None,
-                 spawn=None, send_task_num=0, load_balancer=None,
-                 avg_delay=0, heartbeat_interval=30):
+                 spawn=None, send_task_num=None, load_balancer=None,
+                 avg_delay=0, heartbeat_interval=1):
         if evt_listener is None:
             evt_listener = self.fake_state_evt_listener
         if get_flow_func is None:
             get_flow_func = self.fake_get_flow_func
         rpc.TcpConnection.__init__(self, addr, evt_listener, get_flow_func,
-                                   spawn=fake_spawn)
+                                   spawn=fake_spawn,
+                                   heartbeat_interval=heartbeat_interval)
         self._send_task_num = send_task_num
         self._avg_delay_per_min = avg_delay
-        self._heartbeat_interval = heartbeat_interval
 
     def fake_state_evt_listener(self, *args, **kwargs):
         pass
@@ -98,7 +105,10 @@ class FakeTcpConnection(rpc.TcpConnection):
         return self._socket
 
     def get_pending_send_task_num(self):
-        return self._send_task_num
+        if self._send_task_num is None:
+            return super(FakeTcpConnection, self).get_pending_send_task_num()
+        else:
+            return self._send_task_num
 
     def get_avg_delay_per_min(self):
         return self._avg_delay_per_min
@@ -109,11 +119,16 @@ class FakeTcpConnection(rpc.TcpConnection):
     def set_flow_func(self, flow_func):
         self._get_flow_func = flow_func
 
+    def set_heartbeat_timeout(self, hb_timeout):
+        self._heartbeat_timeout = hb_timeout
+
 
 class FakeTcpChannel(rpc.TcpChannel):
 
+    my_conn_cls = FakeTcpConnection
+
     def __init__(self, addr, spawn, recv_content='', heartbeat_interval=30):
-        rpc.TcpChannel.conn_cls = FakeTcpConnection
+        rpc.TcpChannel.conn_cls = FakeTcpChannel.my_conn_cls
         rpc.TcpChannel.__init__(self, addr)
         self.socket = self._good_connections[0].get_socket()
         if recv_content:
@@ -284,6 +299,8 @@ class TcpChannelTest(unittest.TestCase):
         self.response_class = self.service_stub.GetResponseClass(self.method)
 
     def tearDown(self):
+        FakeTcpSocket.global_is_client = None
+        FakeTcpChannel.my_conn_cls = FakeTcpConnection
         sock = self.channel.get_socket()
         self.channel.close()
         self.assertFalse(sock.is_connected())
@@ -554,14 +571,76 @@ class TcpChannelTest(unittest.TestCase):
         self.assertEqual(1, channel.get_flow_id())
 
     def test_connection_heartbeat_fail(self):
+        FakeTcpSocket.global_is_client = False
         channel = FakeTcpChannel('127.0.0.1:11111', None, recv_content="",
                                  heartbeat_interval=1)
         self.assertTrue(self.channel.get_socket().is_connected())
         good_conns = channel.get_connections()
         self.assertEqual(1, len(good_conns))
+        good_conns[0].set_heartbeat_timeout(1)
 
-        gevent.sleep(4)
+        gevent.sleep(9)
         self.assertEqual(0, len(good_conns))
+
+    def test_connection_fail_putting_tasks_to_other_conns(self):
+        class OnlySendHbTcpConnection(FakeTcpConnection):
+            def __init__(self, *args, **kwargs):
+                super(OnlySendHbTcpConnection, self).__init__(*args, **kwargs)
+
+                self._regular_send_task = []
+
+            def _do_add_send_task(self, send_task):
+                req_data = send_task.req_data
+                if isinstance(req_data.req_msg, rpc_meta_pb2.HeartBeatRequest):
+                    super(OnlySendHbTcpConnection, self)._do_add_send_task(send_task)
+                else:
+                    self._regular_send_task.append(send_task)
+
+            def get_pending_send_tasks(self):
+                regular_size = len(self._regular_send_task)
+                hb_size = self._send_task_queue.qsize()
+                for task in self._regular_send_task:
+                    self._send_task_queue.put_nowait(task)
+                self._regular_send_task = []
+
+                assert self._send_task_queue.qsize() == regular_size + hb_size
+
+                return super(OnlySendHbTcpConnection, self).get_pending_send_tasks()
+
+            def get_pending_send_task_num(self):
+                return self._send_task_queue.qsize() + len(self._regular_send_task)
+
+        def done(_con, _rsp):
+            pass
+
+        FakeTcpSocket.global_is_client = False
+        FakeTcpChannel.my_conn_cls = OnlySendHbTcpConnection
+        addrs = ('127.0.0.1:11111', '127.0.0.1:11112')
+        channel = FakeTcpChannel(addrs, None, recv_content="",
+                                 heartbeat_interval=1)
+
+        conns = channel.get_connections()
+        self.assertEqual(2, len(conns))
+
+        problem_conn = conns[0]
+        problem_conn.set_heartbeat_timeout(1)
+
+        sockets = [_conn.get_socket() for _conn in channel.get_connections()]
+        for soc in sockets:
+            self.assertTrue(soc.is_connected())
+
+        for _ in xrange(10):
+            controller = rpc.RpcController()
+            res = channel.CallMethod(self.method, controller,
+                        self.request, self.response_class, done)
+            self.assertIsNone(res)
+
+        self.assertGreater(problem_conn.get_pending_send_task_num(), 0)
+
+        gevent.sleep(9)
+        self.assertEqual(0, problem_conn.get_pending_send_task_num())
+        good_conns = channel.get_connections()
+        self.assertEqual(1, len(good_conns))
 
     def test_resolve_addr_with_single_addr(self):
         expected_addrs = [('127.0.0.1', 30012)]
