@@ -385,8 +385,12 @@ class TcpConnection(object):
                         break
                     else:
                         heapq.heappop(self._timeout_queue)
+                        recv_info = self._recv_infos.get(flow_id)
+                        if recv_info is None:
+                            continue
+
                         meta_info, rpc_controller, response_class, done, req_data = \
-                            self._recv_infos[flow_id]
+                            recv_info
                         timeout_time = time.time()
                         self._stat.add_rsp_stat(1, timeout_time - req_data.begin_time)
                         err_msg = 'service timeout'
