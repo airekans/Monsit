@@ -49,8 +49,8 @@ def get_net_flow_stat(net_info, last_net_info):
     last_net_inf = last_net_info[1]
     diff_sec = int((cur_date - last_date).total_seconds())
 
-    recv_amount = (cur_net_info.recv_byte - last_net_inf.recv_byte) / diff_sec
-    send_amount = (cur_net_info.send_byte - last_net_inf.send_byte) / diff_sec
+    recv_amount = (cur_net_info.recv_byte - last_net_inf.recv_byte) / diff_sec / 1024 # KB
+    send_amount = (cur_net_info.send_byte - last_net_inf.send_byte) / diff_sec / 1024 # KB
     if recv_amount < 0:
         recv_amount = 0
     if send_amount < 0:
