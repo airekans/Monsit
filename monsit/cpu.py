@@ -1,6 +1,6 @@
 
 def parse_cpu_stat(stat_field):
-    assert len(stat_field) > 7
+    assert len(stat_field) >= 7
     stat_info = {'user': int(stat_field[0]),
                  'nice': int(stat_field[1]),
                  'sys': int(stat_field[2]),
