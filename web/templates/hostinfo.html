@@ -46,12 +46,12 @@ $(function() {
                     get_stat_func: function(stat) {
                         return stat;
                     }},
-        net_recv_chart: {title: 'Recv', y_axis_unit: 'B',
+        net_recv_chart: {title: 'Recv', y_axis_unit: 'KB',
                          stat_name: 'net',
                          get_stat_func: function(stat) {
                              return stat.recv;
                          }},
-        net_send_chart: {title: 'Send', y_axis_unit: 'B',
+        net_send_chart: {title: 'Send', y_axis_unit: 'KB',
                          stat_name: 'net',
                          get_stat_func: function(stat) {
                              return stat.send;
