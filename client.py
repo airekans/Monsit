@@ -4,7 +4,7 @@ import optparse
 import sys
 
 import gevent
-from monsit import cpu, rpc, net, memory
+from monsit import cpu, rpc, net, memory, disk
 
 from monsit.proto import monsit_pb2
 
@@ -15,7 +15,7 @@ def get_register_info():
     return reg_info
 
 
-def collect_machine_info():
+def collect_machine_info(is_first_time):
     machine_info = monsit_pb2.ReportRequest()
     machine_info.host_name = socket.gethostname()
 
@@ -49,6 +49,34 @@ def collect_machine_info():
     mem_info.swap_mem.used = swap_info.used
     mem_info.swap_mem.percent = int(swap_info.percent)
 
+    disk_io_counters = disk.get_io_counters()
+    disk_basic_infos = disk.get_partitions()
+    for info in disk_basic_infos:
+        dev_name = info.device
+        if dev_name not in disk_io_counters:
+            continue
+
+        disk_io = disk_io_counters[dev_name]
+        disk_info = machine_info.disk_infos.add()
+        disk_info.device_name = dev_name
+        disk_info.io_counters.read_count = disk_io.read_count
+        disk_info.io_counters.write_count = disk_io.write_count
+        disk_info.io_counters.read_bytes = disk_io.read_bytes
+        disk_info.io_counters.write_bytes = disk_io.write_bytes
+        disk_info.io_counters.read_time = disk_io.read_time
+        disk_info.io_counters.write_time = disk_io.write_time
+
+        disk_usage = disk.get_usage(info.mountpoint)
+        disk_info.usage.total = disk_usage.total
+        disk_info.usage.used = disk_usage.used
+        disk_info.usage.free = disk_usage.free
+        disk_info.usage.percent = int(disk_usage.percent)
+
+        if is_first_time:
+            disk_info.basic_info.mount_point = info.mountpoint
+            disk_info.basic_info.fs_type = info.fstype
+            disk_info.basic_info.options = info.opts
+
     machine_info.datetime = int(time.time())
 
     return machine_info
@@ -67,8 +95,10 @@ def collect_thread(master_addr, interval):
         print 'Failed to register to master: ', rsp.msg
         sys.exit(1)
 
+    is_first_time = True
     while True:
-        req = collect_machine_info()
+        req = collect_machine_info(is_first_time)
+        is_first_time = False
         controller = rpc.RpcController()
         rsp = stub.Report(controller, req)
         print rsp
