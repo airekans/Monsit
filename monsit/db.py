@@ -11,7 +11,8 @@ _DB_CONFIG = {'host': '127.0.0.1',
               'database': 'monsit'}
 _POOL_SIZE = mysql.connector.pooling.CNX_POOL_MAXSIZE
 
-_VALID_FIELDS = ['cpu', 'net', 'vmem', 'swap']
+_VALID_FIELDS = ['cpu', 'net', 'vmem', 'swap',
+                 'disk_io', 'disk_usage']
 
 
 class TableNames(object):
@@ -164,6 +165,36 @@ class DBConnection(object):
         ) % DBConnection.get_host_table_name(host_id, 'swap')
         cursor.execute(swap_table_stmt)
 
+        disk_io_table_stmt = (
+            'CREATE TABLE IF NOT EXISTS `%s` ('
+            '  `id` int(11) NOT NULL AUTO_INCREMENT,'
+            '  `device_name` varchar(14) NOT NULL,'
+            '  `read_count` bigint NOT NULL,'
+            '  `write_count` bigint NOT NULL,'
+            '  `read_bytes` bigint NOT NULL,'
+            '  `write_bytes` bigint NOT NULL,'
+            '  `read_time` bigint NOT NULL,'
+            '  `write_time` bigint NOT NULL,'
+            '  `datetime` datetime NOT NULL,'
+            '  PRIMARY KEY (`id`)'
+            ') ENGINE=InnoDB'
+        ) % DBConnection.get_host_table_name(host_id, 'disk_io')
+        cursor.execute(disk_io_table_stmt)
+
+        disk_usage_table_stmt = (
+            'CREATE TABLE IF NOT EXISTS `%s` ('
+            '  `id` int(11) NOT NULL AUTO_INCREMENT,'
+            '  `device_name` varchar(14) NOT NULL,'
+            '  `total` bigint NOT NULL,'
+            '  `used` bigint NOT NULL,'
+            '  `free` bigint NOT NULL,'
+            '  `percent` int(11) NOT NULL,'
+            '  `datetime` datetime NOT NULL,'
+            '  PRIMARY KEY (`id`)'
+            ') ENGINE=InnoDB'
+        ) % DBConnection.get_host_table_name(host_id, 'disk_usage')
+        cursor.execute(disk_usage_table_stmt)
+
         self.__cnx.commit()
 
     def insert_host_info(self, host_info, host_id):
@@ -175,6 +206,8 @@ class DBConnection(object):
         net_tbl_name = self.get_host_table_name(host_id, 'net')
         vmem_tbl_name = self.get_host_table_name(host_id, 'vmem')
         swap_tbl_name = self.get_host_table_name(host_id, 'swap')
+        disk_io_tbl_name = self.get_host_table_name(host_id, 'disk_io')
+        disk_usage_tbl_name = self.get_host_table_name(host_id, 'disk_usage')
 
         cpu_insert_stmt = (
             "INSERT INTO %s SET"
@@ -259,6 +292,58 @@ class DBConnection(object):
             print err.msg
             self.__cnx.rollback()
             return False
+
+        disk_io_insert_stmt = (
+            "INSERT INTO %s SET"
+            " device_name='%s',"
+            " read_count=%d,"
+            " write_count=%d,"
+            " read_bytes=%d,"
+            " write_bytes=%d,"
+            " read_time=%d,"
+            " write_time=%d,"
+            " datetime='%s'"
+        )
+        disk_usage_insert_stmt = (
+            "INSERT INTO %s SET"
+            " device_name='%s',"
+            " total=%d,"
+            " used=%d,"
+            " free=%d,"
+            " percent=%d,"
+            " datetime='%s'"
+        )
+        for disk_info in host_info.disk_infos:
+            io_counters = disk_info.io_counters
+            disk_usage = disk_info.usage
+            try:
+                stmt = disk_io_insert_stmt % (
+                    disk_io_tbl_name,
+                    disk_info.device_name,
+                    io_counters.read_count,
+                    io_counters.write_count,
+                    io_counters.read_bytes,
+                    io_counters.write_bytes,
+                    io_counters.read_time,
+                    io_counters.write_time,
+                    report_time
+                )
+                cursor.execute(stmt)
+
+                stmt = disk_usage_insert_stmt % (
+                    disk_usage_tbl_name,
+                    disk_info.device_name,
+                    disk_usage.total,
+                    disk_usage.used,
+                    disk_usage.free,
+                    disk_usage.percent,
+                    report_time
+                )
+                cursor.execute(stmt)
+            except mysql.connector.Error as err:
+                print err.msg
+                self.__cnx.rollback()
+                return False
 
         self.__cnx.commit()
         return True
