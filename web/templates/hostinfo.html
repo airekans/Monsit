@@ -114,6 +114,21 @@ $(function() {
                     stat_times.push(t);
                 }
 
+                var this_config = {is_auto_refresh: false};
+                function on_click_auto_refresh(config, chart_id) {
+                    var the_chart = charts[chart_id];
+                    return function () {
+                        config.is_auto_refresh = !config.is_auto_refresh;
+                        if (config.is_auto_refresh) {
+                            // auto refresh the chart
+                            alert('auto refresh ' + chart_id);
+                        } else {
+                            // disable auto refresh
+                            alert('disable auto refresh ' + chart_id);
+                        }
+                    }
+                }
+
                 var option = {
                     title : {
                         text: tmp_data.title
@@ -131,7 +146,10 @@ $(function() {
                             dataZoom : {show: true},
                             dataView : {show: true, readOnly: false},
                             magicType : {show: true, type: ['line', 'bar']},
-                            saveAsImage : {show: true}
+                            saveAsImage : {show: true},
+                            autoRefresh : {show: true, title: '自动刷新',
+                                           icon: 'image://static/img/octicons-sync.png',
+                                           onclick: on_click_auto_refresh(this_config, chart_id)}
                         }
                     },
                     dataZoom : {
