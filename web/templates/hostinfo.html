@@ -117,14 +117,24 @@ $(function() {
                 var this_config = {is_auto_refresh: false};
                 function on_click_auto_refresh(config, chart_id) {
                     var the_chart = charts[chart_id];
+                    var is_set_interval = false;
+                    var time_ticket = false;
                     return function () {
                         config.is_auto_refresh = !config.is_auto_refresh;
                         if (config.is_auto_refresh) {
                             // auto refresh the chart
-                            alert('auto refresh ' + chart_id);
+                            time_ticket = setInterval(function() {
+                                // connect the server and try to fetch the latest data
+                                alert('auto refresh ' + chart_id);
+                            }, 30000); // refresh every 30 seconds
+                            is_set_interval = true;
                         } else {
                             // disable auto refresh
-                            alert('disable auto refresh ' + chart_id);
+                            if (is_set_interval) {
+                                alert('disable auto refresh ' + chart_id);
+                                clearInterval(time_ticket);
+                                is_set_interval = false;
+                            }
                         }
                     }
                 }
