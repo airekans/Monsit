@@ -349,10 +349,11 @@ class DBConnection(object):
         return True
 
     def get_host_stats(self, host_id, fields):
+        LAST_NUM_MIN = 30
         cursor = self.__cnx.cursor()
-        stmt_template = ('SELECT * FROM '
-                         '(SELECT * FROM %s ORDER BY datetime DESC LIMIT 100) '
-                         'sub ORDER BY datetime ASC')
+        stmt_template = ('SELECT * FROM %s' +
+                         (' WHERE DATE_SUB(NOW(),INTERVAL %d MINUTE) <= datetime' % LAST_NUM_MIN) +
+                         ' ORDER BY datetime ASC')
         stats = {}
         for field in fields:
             if field in _VALID_FIELDS:
@@ -459,3 +460,5 @@ class DBConnection(object):
         #print stats
         return stats
 
+    def get_updated_stats(self, host_id, field_type, last_date):
+        return

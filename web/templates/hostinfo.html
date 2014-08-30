@@ -116,7 +116,8 @@ $(function() {
                     time_record.latest_time = t;
                 }
 
-                var this_config = {is_auto_refresh: false, stat_type: tmp_data.stat_name};
+                var this_config = {is_auto_refresh: false, stat_type: tmp_data.stat_name,
+                                   stat_names: names};
                 function on_click_auto_refresh(config, chart_id, time_record) {
                     var stat_type = config.stat_type;
                     var the_chart = charts[chart_id];
@@ -128,7 +129,8 @@ $(function() {
                             // auto refresh the chart
                             time_ticket = setInterval(function() {
                                 // connect the server and try to fetch the latest data
-                                var args = {type: stat_type, latest_time: time_record.latest_time};
+                                var args = {id: host_id, type: stat_type,
+                                            latest_time: time_record.latest_time};
                                 $.getJSON($SCRIPT_ROOT + '/_get_latest_info', args, function (data) {
                                     the_chart.addData([[0, 2, false, false]]);
                                 });
@@ -172,8 +174,7 @@ $(function() {
                         show : true,
                         realtime : true,
                         y : 280,
-                        height : 20,
-                        start : 50
+                        height : 20
                     },
                     calculable : true,
                     xAxis : [

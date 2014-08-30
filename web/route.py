@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, abort, jsonify
 from monsit import db
+import datetime
 
 app = Flask(__name__)
 
@@ -75,6 +76,9 @@ def get_disk_io_stat(disk_io_info, last_disk_io_info):
     return read_rate
 
 
+_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
+
+
 @app.route('/_get_hostinfo', methods=['GET'])
 def ajax_hostinfo():
     field_types = request.args.getlist('type[]')
@@ -93,7 +97,7 @@ def ajax_hostinfo():
                 cpu_stat = host_stats['cpu']
                 last_cpu_stat = {}
                 for date, cpu_info in db_stats:
-                    stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
+                    stat_time = date.strftime(_DATE_FORMAT)
                     cpu_name = cpu_info.name
                     if cpu_name not in cpu_stat:
                         cpu_stat[cpu_name] = {}
@@ -105,7 +109,7 @@ def ajax_hostinfo():
                 net_stat = host_stats['net']
                 last_net_stat = {}
                 for date, net_info in db_stats:
-                    stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
+                    stat_time = date.strftime(_DATE_FORMAT)
                     net_dev_name = net_info.name
                     if net_dev_name not in net_stat:
                         net_stat[net_dev_name] = {}
@@ -118,21 +122,21 @@ def ajax_hostinfo():
                 vmem_stat = host_stats['vmem']
                 vmem_stat['vmem'] = {}
                 for date, vmem_info in db_stats:
-                    stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
+                    stat_time = date.strftime(_DATE_FORMAT)
                     vmem_stat['vmem'][stat_time] = vmem_info.percent
             elif field == 'swap':
                 host_stats['swap'] = {}
                 swap_stat = host_stats['swap']
                 swap_stat['swap'] = {}
                 for date, swap_info in db_stats:
-                    stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
+                    stat_time = date.strftime(_DATE_FORMAT)
                     swap_stat['swap'][stat_time] = swap_info.percent
             elif field == 'disk_io':
                 host_stats['disk_io'] = {}
                 disk_io_stat = host_stats['disk_io']
                 last_disk_io_stat = {}
                 for date, disk_io_info, device_name in db_stats:
-                    stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
+                    stat_time = date.strftime(_DATE_FORMAT)
                     if device_name not in disk_io_stat:
                         disk_io_stat[device_name] = {}
                     disk_io_stat[device_name][stat_time] = \
@@ -143,21 +147,35 @@ def ajax_hostinfo():
                 host_stats['disk_usage'] = {}
                 disk_usage_stat = host_stats['disk_usage']
                 for date, disk_usage_info, device_name in db_stats:
-                    stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
+                    stat_time = date.strftime(_DATE_FORMAT)
                     if device_name not in disk_usage_stat:
                         disk_usage_stat[device_name] = {}
                     disk_usage_stat[device_name][stat_time] = disk_usage_info.percent
+            else:
+                return jsonify(return_code=1)
 
-    return jsonify(stats=host_stats)
+    return jsonify(return_code=0, stats=host_stats)
 
 
 @app.route('/_get_latest_info', methods=['GET'])
 def ajax_latest_info():
     field_type = request.args.get('type')
+    host_id = request.args.get('id', 0, type=int)
     last_time = request.args.get('latest_time')
-    print 'field_type:', field_type, 'last_time:', last_time
+    try:
+        last_date = datetime.datetime.strptime(last_time, _DATE_FORMAT)
+    except ValueError, e:
+        print 'date parsing error:', e
+        return jsonify(return_code=1)
 
-    return jsonify(return_code=1)
+    with db.DBConnection() as cnx:
+        try:
+            db_host_stats = cnx.get_updated_stats(host_id, field_type, last_date)
+        except:
+            print 'db error'
+            raise
+
+    return jsonify(return_code=0)
 
 
 if __name__ == "__main__":
