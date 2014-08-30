@@ -53,6 +53,7 @@ def collect_machine_info(is_first_time):
     disk_basic_infos = disk.get_partitions()
     for info in disk_basic_infos:
         dev_name = info.device
+        dev_name = dev_name.split('/')[-1]
         if dev_name not in disk_io_counters:
             continue
 

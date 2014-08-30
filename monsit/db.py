@@ -419,6 +419,42 @@ class DBConnection(object):
                         raise
 
                     stats[field] = swap_infos
+                elif field == 'disk_io':
+                    cursor.execute(select_stmt)
+                    disk_io_infos = []
+                    try:
+                        for stat in cursor:
+                            disk_io_info = \
+                                monsit_pb2.DiskInfo.IOCounter(read_count=stat[2],
+                                                              write_count=stat[3],
+                                                              read_bytes=stat[4],
+                                                              write_bytes=stat[5],
+                                                              read_time=stat[6],
+                                                              write_time=stat[7])
+                            disk_io_infos.append((stat[8], disk_io_info, stat[1]))
+                    except:
+                        import traceback
+                        traceback.print_exc()
+                        raise
+
+                    stats[field] = disk_io_infos
+                elif field == 'disk_usage':
+                    cursor.execute(select_stmt)
+                    disk_usage_infos = []
+                    try:
+                        for stat in cursor:
+                            disk_usage_info = \
+                                monsit_pb2.DiskInfo.UsageInfo(total=stat[2],
+                                                              used=stat[3],
+                                                              free=stat[4],
+                                                              percent=stat[5])
+                            disk_usage_infos.append((stat[6], disk_usage_info, stat[1]))
+                    except:
+                        import traceback
+                        traceback.print_exc()
+                        raise
+
+                    stats[field] = disk_usage_infos
 
         #print stats
         return stats

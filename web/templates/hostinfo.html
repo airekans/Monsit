@@ -31,6 +31,16 @@
       <div id="swap_chart" style="height:300px;"></div>
     </div>
 </div>
+
+<h2 class="sub-header">Disk</h2>
+<div class="row placeholders">
+    <div class="col-xs-12 col-sm-12 placeholder">
+      <div id="disk_io_chart" style="height:300px;"></div>
+    </div>
+    <div class="col-xs-12 col-sm-12 placeholder">
+      <div id="disk_usage_chart" style="height:300px;"></div>
+    </div>
+</div>
 {% endblock %}
 
 {% block body_js %}
@@ -39,7 +49,7 @@
 $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 var host_id = {{ host_id }};
 $(function() {
-    var chart_types = ['cpu', 'net', 'vmem', 'swap'];
+    var chart_types = ['cpu', 'net', 'vmem', 'swap', 'disk_io', 'disk_usage'];
     var chart_data = {
         cpu_chart: {title: 'Usage', y_axis_unit: '%',
                     stat_name: 'cpu',
@@ -63,6 +73,16 @@ $(function() {
                      }},
         swap_chart: {title: 'Swap Memory', y_axis_unit: '%',
                      stat_name: 'swap',
+                     get_stat_func: function(stat) {
+                         return stat;
+                     }},
+        disk_io_chart: {title: 'IO Stat', y_axis_unit: 'KB',
+                     stat_name: 'disk_io',
+                     get_stat_func: function(stat) {
+                         return stat;
+                     }},
+        disk_usage_chart: {title: 'Usage', y_axis_unit: '%',
+                     stat_name: 'disk_usage',
                      get_stat_func: function(stat) {
                          return stat;
                      }}

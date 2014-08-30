@@ -34,6 +34,7 @@ class MonsitServiceImpl(monsit_pb2.MonsitService):
             rsp = monsit_pb2.ReportResponse(return_code=1, msg='Host not registered')
             return rsp
 
+        # TODO: here's a bug
         if len(request.net_infos) > 0:
             with db.DBConnection() as cnx:
                 host_id = self.__registered_hosts[request.host_name][0]

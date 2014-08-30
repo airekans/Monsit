@@ -49,8 +49,8 @@ def get_net_flow_stat(net_info, last_net_info):
     last_net_inf = last_net_info[1]
     diff_sec = int((cur_date - last_date).total_seconds())
 
-    recv_amount = (cur_net_info.recv_byte - last_net_inf.recv_byte) / diff_sec / 1024 # KB
-    send_amount = (cur_net_info.send_byte - last_net_inf.send_byte) / diff_sec / 1024 # KB
+    recv_amount = (cur_net_info.recv_byte - last_net_inf.recv_byte) / diff_sec / 1024  # KB
+    send_amount = (cur_net_info.send_byte - last_net_inf.send_byte) / diff_sec / 1024  # KB
     if recv_amount < 0:
         recv_amount = 0
     if send_amount < 0:
@@ -58,6 +58,21 @@ def get_net_flow_stat(net_info, last_net_info):
 
     return {'recv': recv_amount, 'send': send_amount}
 
+
+def get_disk_io_stat(disk_io_info, last_disk_io_info):
+    cur_date = disk_io_info[0]
+    cur_io_info = disk_io_info[1]
+    if last_disk_io_info is None:
+        return cur_io_info.read_bytes / 1024
+
+    last_date = last_disk_io_info[0]
+    last_io_info = last_disk_io_info[1]
+    diff_sec = int((cur_date - last_date).total_seconds())
+
+    read_rate = (cur_io_info.read_bytes - last_io_info.read_bytes) / diff_sec / 1024
+    if read_rate < 0:
+        read_rate = 0
+    return read_rate
 
 
 @app.route('/_get_hostinfo', methods=['GET'])
@@ -112,6 +127,26 @@ def ajax_hostinfo():
                 for date, swap_info in db_stats:
                     stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
                     swap_stat['swap'][stat_time] = swap_info.percent
+            elif field == 'disk_io':
+                host_stats['disk_io'] = {}
+                disk_io_stat = host_stats['disk_io']
+                last_disk_io_stat = {}
+                for date, disk_io_info, device_name in db_stats:
+                    stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
+                    if device_name not in disk_io_stat:
+                        disk_io_stat[device_name] = {}
+                    disk_io_stat[device_name][stat_time] = \
+                        get_disk_io_stat((date, disk_io_info),
+                                         last_disk_io_stat.get(device_name, None))
+                    last_disk_io_stat[device_name] = (date, disk_io_info)
+            elif field == 'disk_usage':
+                host_stats['disk_usage'] = {}
+                disk_usage_stat = host_stats['disk_usage']
+                for date, disk_usage_info, device_name in db_stats:
+                    stat_time = date.strftime('%Y-%m-%d %H:%M:%S')
+                    if device_name not in disk_usage_stat:
+                        disk_usage_stat[device_name] = {}
+                    disk_usage_stat[device_name][stat_time] = disk_usage_info.percent
 
     return jsonify(stats=host_stats)
 
