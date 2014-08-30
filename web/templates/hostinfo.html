@@ -109,13 +109,16 @@ $(function() {
                     names.push(name);
                 }
                 var stat_times = [];
+                var time_record = {};
                 for (var t in stat[names[0]])
                 {
                     stat_times.push(t);
+                    time_record.latest_time = t;
                 }
 
-                var this_config = {is_auto_refresh: false};
-                function on_click_auto_refresh(config, chart_id) {
+                var this_config = {is_auto_refresh: false, stat_type: tmp_data.stat_name};
+                function on_click_auto_refresh(config, chart_id, time_record) {
+                    var stat_type = config.stat_type;
                     var the_chart = charts[chart_id];
                     var is_set_interval = false;
                     var time_ticket = false;
@@ -125,7 +128,10 @@ $(function() {
                             // auto refresh the chart
                             time_ticket = setInterval(function() {
                                 // connect the server and try to fetch the latest data
-                                alert('auto refresh ' + chart_id);
+                                var args = {type: stat_type, latest_time: time_record.latest_time};
+                                $.getJSON($SCRIPT_ROOT + '/_get_latest_info', args, function (data) {
+                                    the_chart.addData([[0, 2, false, false]]);
+                                });
                             }, 30000); // refresh every 30 seconds
                             is_set_interval = true;
                         } else {
@@ -159,7 +165,7 @@ $(function() {
                             saveAsImage : {show: true},
                             autoRefresh : {show: true, title: '自动刷新',
                                            icon: 'image://static/img/octicons-sync.png',
-                                           onclick: on_click_auto_refresh(this_config, chart_id)}
+                                           onclick: on_click_auto_refresh(this_config, chart_id, time_record)}
                         }
                     },
                     dataZoom : {

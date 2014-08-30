@@ -151,6 +151,15 @@ def ajax_hostinfo():
     return jsonify(stats=host_stats)
 
 
+@app.route('/_get_latest_info', methods=['GET'])
+def ajax_latest_info():
+    field_type = request.args.get('type')
+    last_time = request.args.get('latest_time')
+    print 'field_type:', field_type, 'last_time:', last_time
+
+    return jsonify(return_code=1)
+
+
 if __name__ == "__main__":
     db.init()
     app.run(host='0.0.0.0', debug=True)
