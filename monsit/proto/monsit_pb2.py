@@ -13,7 +13,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='monsit.proto',
   package='',
-  serialized_pb='\n\x0cmonsit.proto\"&\n\nInfoReport\x12\n\n\x02id\x18\x01 \x02(\r\x12\x0c\n\x04info\x18\x02 \x02(\x0c\"\xc6\x01\n\nStatReport\x12\n\n\x02id\x18\x01 \x02(\r\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12+\n\x0byaxis_value\x18\x03 \x03(\x0b\x32\x16.StatReport.YAxisValue\x1am\n\nYAxisValue\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x11\n\tnum_value\x18\x02 \x01(\x03\x12\x14\n\x0c\x64ouble_value\x18\x03 \x01(\x01\x12\x11\n\tstr_value\x18\x04 \x01(\t\x12\x15\n\rreserve_value\x18\x05 \x01(\x0c\"]\n\rReportRequest\x12\x0f\n\x07host_id\x18\x01 \x02(\x04\x12\x19\n\x04stat\x18\x02 \x03(\x0b\x32\x0b.StatReport\x12 \n\x0b\x62\x61sic_infos\x18\x03 \x03(\x0b\x32\x0b.InfoReport\"2\n\x0eReportResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"4\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t2k\n\rMonsitService\x12/\n\x08Register\x12\x10.RegisterRequest\x1a\x11.RegisterResponse\x12)\n\x06Report\x12\x0e.ReportRequest\x1a\x0f.ReportResponseB\x03\x90\x01\x01')
+  serialized_pb='\n\x0cmonsit.proto\"&\n\nInfoReport\x12\n\n\x02id\x18\x01 \x02(\r\x12\x0c\n\x04info\x18\x02 \x02(\x0c\"\xc6\x01\n\nStatReport\x12\n\n\x02id\x18\x01 \x02(\r\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12+\n\x0byaxis_value\x18\x03 \x03(\x0b\x32\x16.StatReport.YAxisValue\x1am\n\nYAxisValue\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x11\n\tnum_value\x18\x02 \x01(\x03\x12\x14\n\x0c\x64ouble_value\x18\x03 \x01(\x01\x12\x11\n\tstr_value\x18\x04 \x01(\t\x12\x15\n\rreserve_value\x18\x05 \x01(\x0c\"]\n\rReportRequest\x12\x0f\n\x07host_id\x18\x01 \x02(\x04\x12\x19\n\x04stat\x18\x02 \x03(\x0b\x32\x0b.StatReport\x12 \n\x0b\x62\x61sic_infos\x18\x03 \x03(\x0b\x32\x0b.InfoReport\"2\n\x0eReportResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"E\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\x12\x0f\n\x07host_id\x18\x03 \x02(\x04\x32k\n\rMonsitService\x12/\n\x08Register\x12\x10.RegisterRequest\x1a\x11.RegisterResponse\x12)\n\x06Report\x12\x0e.ReportRequest\x1a\x0f.ReportResponseB\x03\x90\x01\x01')
 
 
 
@@ -276,6 +276,13 @@ _REGISTERRESPONSE = descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    descriptor.FieldDescriptor(
+      name='host_id', full_name='RegisterResponse.host_id', index=2,
+      number=3, type=4, cpp_type=4, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -286,7 +293,7 @@ _REGISTERRESPONSE = descriptor.Descriptor(
   is_extendable=False,
   extension_ranges=[],
   serialized_start=442,
-  serialized_end=494,
+  serialized_end=511,
 )
 
 _STATREPORT_YAXISVALUE.containing_type = _STATREPORT;
@@ -349,8 +356,8 @@ _MONSITSERVICE = descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=496,
-  serialized_end=603,
+  serialized_start=513,
+  serialized_end=620,
   methods=[
   descriptor.MethodDescriptor(
     name='Register',
