@@ -10,37 +10,42 @@ class MonsitServiceImpl(monsit_pb2.MonsitService):
     def __init__(self):
         with db.DBConnection() as cnx:
             registered_hosts = {}
-            for host in cnx.get_all_hosts():
-                registered_hosts[host[1]] = [host[0], False]
+            registered_host_ids = {}
+            for host_id, host_name in cnx.get_all_hosts():
+                registered_hosts[host_name] = host_id
+                registered_host_ids[host_id] = [host_name, False]
 
-            self.__registered_hosts = registered_hosts
+            self.__registered_host_names = registered_hosts
+            self.__registered_host_ids = registered_host_ids
 
     def Register(self, rpc_controller, request, done):
         try:
-            host_info = self.__registered_hosts[request.host_name]
-            host_info[1] = True
+            host_id = self.__registered_host_names[request.host_name]
+            self.__registered_host_ids[host_id][1] = True
         except KeyError:
             with db.DBConnection() as cnx:
-                host_info = cnx.insert_new_host(request.host_name)
-                self.__registered_hosts[request.host_name] = [host_info[0], True]
+                host_id, host_name = cnx.insert_new_host(request.host_name)
+                self.__registered_host_names[request.host_name] = host_id
+                self.__registered_host_ids[host_id] = [request.host_name, True]
 
-        rsp = monsit_pb2.RegisterResponse(return_code=0, msg='SUCCESS')
+        print request
+
+        rsp = monsit_pb2.RegisterResponse(return_code=0, msg='SUCCESS',
+                                          host_id=host_id)
         return rsp
 
     def Report(self, rpc_controller, request, done):
-        if request.host_name not in self.__registered_hosts or \
-           not self.__registered_hosts[request.host_name][1]:
-            print 'Host not registered:', request.host_name
+        if request.host_id not in self.__registered_host_ids:
+            print 'Host not registered:', request.host_id
+            rsp = monsit_pb2.ReportResponse(return_code=1, msg='Host not registered')
+            return rsp
+        elif not self.__registered_host_ids[request.host_id][1]:
+            host_name = self.__registered_host_ids[request.host_id][0]
+            print 'Host not registered:', host_name
             rsp = monsit_pb2.ReportResponse(return_code=1, msg='Host not registered')
             return rsp
 
-        # TODO: here's a bug
-        if len(request.net_infos) > 0:
-            with db.DBConnection() as cnx:
-                host_id = self.__registered_hosts[request.host_name][0]
-                cnx.create_host_tables(host_id)
-                if not cnx.insert_host_info(request, host_id):
-                    print 'failed to store req in db'
+        print request
 
         rsp = monsit_pb2.ReportResponse(return_code=0, msg='SUCCESS')
         return rsp
