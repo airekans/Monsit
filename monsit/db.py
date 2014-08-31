@@ -19,8 +19,12 @@ class TableNames(object):
     hosts_tbl = 'hosts'
 
     @staticmethod
-    def get_host_table_name(host_id, field):
-        return '%s_%d' % (field, host_id)
+    def get_host_info_table_name(host_id):
+        return 'hostinfo_%d' % host_id
+
+    @staticmethod
+    def get_stat_table_name(host_id, field_id):
+        return 'field_%d_%d' % (host_id, field_id)
 
 
 def _create_global_tables(cnx):
@@ -53,6 +57,20 @@ def init():
 
     _create_global_tables(cnx)
     cnx.close()
+
+
+class ValueType(object):
+    Invalid = 0
+    Int = 1
+    Double = 2
+    String = 3
+
+    _mysql_type_str = ['invalid', 'bigint',
+                       'double', 'varchar(25)']
+
+    @staticmethod
+    def get_mysql_type_str(value_type):
+        return ValueType._mysql_type_str[value_type]
 
 
 class DBConnection(object):
@@ -98,6 +116,60 @@ class DBConnection(object):
 
         return None
 
+    def get_field_id(self, cursor, stat_name, host_id):
+        select_stmt = (
+            "SELECT field_id FROM %s"
+            " WHERE stat_name='%s'"
+        ) % (TableNames.get_host_info_table_name(host_id), stat_name)
+        cursor.execute(select_stmt)
+
+        field_id = None
+        for res in cursor:
+            print 'res type', type(res), len(res)
+            field_id = res[0]
+
+        assert field_id is not None
+        return field_id
+
+    def insert_builtin_fields(self, cursor, host_id):
+        builtin_field_configs = [
+            ('cpu_total', 'Total Usage', ValueType.Int, '%'),
+            ('network_recv', 'Recv', ValueType.Int, 'KB'),
+            ('network_send', 'Send', ValueType.Int, 'KB')
+        ]
+
+        hostinfo_tbl_name = TableNames.get_host_info_table_name(host_id)
+        insert_stmt_template = (
+            "INSERT INTO %s SET"
+            " stat_name='%s',"
+            " chart_name='%s',"
+            " y_value_type=%d,"
+            " y_unit='%s'"
+        )
+        create_stmt_template = (
+            'CREATE TABLE IF NOT EXISTS `%s` ('
+            '  `id` int(11) NOT NULL AUTO_INCREMENT,'
+            '  `series` varchar(25) NOT NULL,'
+            '  `y_value` %s NOT NULL,'
+            '  `datetime` datetime NOT NULL,'
+            '  PRIMARY KEY (`id`)'
+            ') ENGINE=InnoDB'
+        )
+        for config in builtin_field_configs:
+            stat_name, chart_name, y_value_type, y_unit = config
+            insert_stmt = insert_stmt_template % (
+                hostinfo_tbl_name,
+                stat_name, chart_name, y_value_type, y_unit
+            )
+            cursor.execute(insert_stmt)
+
+            field_id = self.get_field_id(cursor, stat_name, host_id)
+            stat_tbl_name = TableNames.get_stat_table_name(host_id, field_id)
+            create_stmt = create_stmt_template % (
+                stat_tbl_name, ValueType.get_mysql_type_str(y_value_type)
+            )
+            cursor.execute(create_stmt)
+
     def insert_new_host(self, host_name):
         cursor = self.__cnx.cursor()
         host_insert_stmt = (
@@ -105,6 +177,23 @@ class DBConnection(object):
             " name='%s'"
         ) % (TableNames.hosts_tbl, host_name)
         cursor.execute(host_insert_stmt)
+
+        host_id, _ = self.get_host_info(host_name)
+
+        create_host_tbl_stmt = (
+            'CREATE TABLE IF NOT EXISTS `%s` ('
+            '  `field_id` int(11) NOT NULL AUTO_INCREMENT,'
+            '  `stat_name` varchar(25) NOT NULL,'
+            '  `chart_name` varchar(25) NOT NULL,'
+            '  `y_value_type` int(11) NOT NULL,'
+            '  `y_unit` varchar(15) NOT NULL,'
+            '  PRIMARY KEY (`field_id`)'
+            ') ENGINE=InnoDB'
+        ) % TableNames.get_host_info_table_name(host_id)
+        cursor.execute(create_host_tbl_stmt)
+
+        self.insert_builtin_fields(cursor, host_id)
+
         self.__cnx.commit()
         return self.get_host_info(host_name)
 
