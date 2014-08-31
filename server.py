@@ -3,6 +3,7 @@ monkey.patch_all()
 
 from monsit import db, rpc
 from monsit.proto import monsit_pb2
+import datetime
 
 
 class MonsitServiceImpl(monsit_pb2.MonsitService):
@@ -46,6 +47,12 @@ class MonsitServiceImpl(monsit_pb2.MonsitService):
             return rsp
 
         print request
+
+        with db.DBConnection() as cnx:
+            report_time = datetime.datetime.fromtimestamp(request.datetime)
+            report_time = report_time.strftime("%Y-%m-%d %H:%M:%S")
+            cnx.insert_stat(request, report_time)
+            cnx.commit()
 
         rsp = monsit_pb2.ReportResponse(return_code=0, msg='SUCCESS')
         return rsp

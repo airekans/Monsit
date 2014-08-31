@@ -67,10 +67,16 @@ class ValueType(object):
 
     _mysql_type_str = ['invalid', 'bigint',
                        'double', 'varchar(25)']
+    _mysql_value_fmt_str = ['invalid', '%d',
+                            '%f', "'%s'"]
 
     @staticmethod
     def get_mysql_type_str(value_type):
         return ValueType._mysql_type_str[value_type]
+
+    @staticmethod
+    def get_mysql_value_fmt_str(value_type):
+        return ValueType._mysql_value_fmt_str[value_type]
 
 
 class DBConnection(object):
@@ -87,6 +93,9 @@ class DBConnection(object):
 
     def close(self):
         self.__cnx.close()
+
+    def commit(self):
+        self.__cnx.commit()
 
     def __enter__(self):
         return self
@@ -130,6 +139,20 @@ class DBConnection(object):
 
         assert field_id is not None
         return field_id
+
+    def get_field_type(self, cursor, host_tbl_name, field_id):
+        select_stmt = (
+            "SELECT y_value_type FROM %s"
+            " WHERE field_id = %d"
+        ) % (host_tbl_name, field_id)
+        cursor.execute(select_stmt)
+
+        field_type = None
+        for res in cursor:
+            field_type = res[0]
+
+        assert field_type is not None
+        return field_type
 
     def insert_builtin_fields(self, cursor, host_id):
         builtin_field_configs = [
@@ -196,6 +219,40 @@ class DBConnection(object):
 
         self.__cnx.commit()
         return self.get_host_info(host_name)
+
+    def insert_stat(self, stat_req, report_time):
+        host_id = stat_req.host_id
+        host_tbl_name = TableNames.get_host_info_table_name(host_id)
+
+        cursor = self.__cnx.cursor()
+        insert_stmt_template = (
+            "INSERT INTO %s SET"
+            "  series='%s',"
+            "  y_value=%s,"
+            "  datetime='%s'"
+        )
+
+        for stat in stat_req.stat:
+            field_id = stat.id
+            field_type = self.get_field_type(cursor, host_tbl_name, field_id)
+
+            stat_tbl_name = TableNames.get_stat_table_name(host_id, field_id)
+            for y_value in stat.y_axis_value:
+                if field_type == ValueType.Int:
+                    stat_value = y_value.num_value
+                elif field_type == ValueType.Double:
+                    stat_value = y_value.double_value
+                elif field_type == ValueType.String:
+                    stat_value = y_value.str_value
+                else:
+                    assert False, 'unrecognized value type %d' % field_type
+
+                insert_stmt = insert_stmt_template % (
+                    stat_tbl_name, y_value.name,
+                    ValueType.get_mysql_value_fmt_str(field_type) % stat_value,
+                    report_time
+                )
+                cursor.execute(insert_stmt)
 
     def create_host_tables(self, host_id):
         cursor = self.__cnx.cursor()
