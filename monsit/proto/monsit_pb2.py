@@ -13,64 +13,29 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='monsit.proto',
   package='',
-  serialized_pb='\n\x0cmonsit.proto\"\x91\x01\n\x07\x43PUInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x12\n\nuser_count\x18\x02 \x02(\x05\x12\x12\n\nnice_count\x18\x03 \x02(\x05\x12\x11\n\tsys_count\x18\x04 \x02(\x05\x12\x12\n\nidle_count\x18\x05 \x02(\x05\x12\x14\n\x0ciowait_count\x18\x06 \x02(\x05\x12\x13\n\x0btotal_count\x18\x07 \x02(\x05\"I\n\x07NetInfo\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\n\n\x02ip\x18\x02 \x02(\t\x12\x11\n\trecv_byte\x18\x03 \x02(\x03\x12\x11\n\tsend_byte\x18\x04 \x02(\x03\"Q\n\x0eVirtualMemInfo\x12\r\n\x05total\x18\x01 \x02(\x03\x12\x11\n\tavailable\x18\x02 \x02(\x03\x12\x0c\n\x04used\x18\x03 \x02(\x03\x12\x0f\n\x07percent\x18\x04 \x02(\x05\"I\n\x0bSwapMemInfo\x12\r\n\x05total\x18\x01 \x02(\x03\x12\x0c\n\x04\x66ree\x18\x02 \x02(\x03\x12\x0c\n\x04used\x18\x03 \x02(\x03\x12\x0f\n\x07percent\x18\x04 \x02(\x05\"O\n\x07MemInfo\x12$\n\x0bvirtual_mem\x18\x01 \x02(\x0b\x32\x0f.VirtualMemInfo\x12\x1e\n\x08swap_mem\x18\x02 \x02(\x0b\x32\x0c.SwapMemInfo\"\xaa\x03\n\x08\x44iskInfo\x12\x13\n\x0b\x64\x65vice_name\x18\x01 \x02(\t\x12(\n\x0bio_counters\x18\x02 \x02(\x0b\x32\x13.DiskInfo.IOCounter\x12\"\n\x05usage\x18\x03 \x02(\x0b\x32\x13.DiskInfo.UsageInfo\x12\'\n\nbasic_info\x18\x04 \x01(\x0b\x32\x13.DiskInfo.BasicInfo\x1a\x84\x01\n\tIOCounter\x12\x12\n\nread_count\x18\x01 \x02(\x04\x12\x13\n\x0bwrite_count\x18\x02 \x02(\x04\x12\x12\n\nread_bytes\x18\x03 \x02(\x04\x12\x13\n\x0bwrite_bytes\x18\x04 \x02(\x04\x12\x11\n\tread_time\x18\x05 \x02(\x04\x12\x12\n\nwrite_time\x18\x06 \x02(\x04\x1aG\n\tUsageInfo\x12\r\n\x05total\x18\x01 \x02(\x04\x12\x0c\n\x04used\x18\x02 \x02(\x04\x12\x0c\n\x04\x66ree\x18\x03 \x02(\x04\x12\x0f\n\x07percent\x18\x04 \x02(\r\x1a\x42\n\tBasicInfo\x12\x13\n\x0bmount_point\x18\x01 \x02(\t\x12\x0f\n\x07\x66s_type\x18\x02 \x02(\t\x12\x0f\n\x07options\x18\x03 \x02(\t\"\xa9\x01\n\rReportRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12\x1b\n\tcpu_infos\x18\x03 \x03(\x0b\x32\x08.CPUInfo\x12\x1b\n\tnet_infos\x18\x04 \x03(\x0b\x32\x08.NetInfo\x12\x1a\n\x08mem_info\x18\x05 \x02(\x0b\x32\x08.MemInfo\x12\x1d\n\ndisk_infos\x18\x06 \x03(\x0b\x32\t.DiskInfo\"2\n\x0eReportResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"4\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t2k\n\rMonsitService\x12/\n\x08Register\x12\x10.RegisterRequest\x1a\x11.RegisterResponse\x12)\n\x06Report\x12\x0e.ReportRequest\x1a\x0f.ReportResponseB\x03\x90\x01\x01')
+  serialized_pb='\n\x0cmonsit.proto\"&\n\nInfoReport\x12\n\n\x02id\x18\x01 \x02(\r\x12\x0c\n\x04info\x18\x02 \x02(\x0c\"\xc6\x01\n\nStatReport\x12\n\n\x02id\x18\x01 \x02(\r\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12+\n\x0byaxis_value\x18\x03 \x03(\x0b\x32\x16.StatReport.YAxisValue\x1am\n\nYAxisValue\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x11\n\tnum_value\x18\x02 \x01(\x03\x12\x14\n\x0c\x64ouble_value\x18\x03 \x01(\x01\x12\x11\n\tstr_value\x18\x04 \x01(\t\x12\x15\n\rreserve_value\x18\x05 \x01(\x0c\"]\n\rReportRequest\x12\x0f\n\x07host_id\x18\x01 \x02(\x04\x12\x19\n\x04stat\x18\x02 \x03(\x0b\x32\x0b.StatReport\x12 \n\x0b\x62\x61sic_infos\x18\x03 \x03(\x0b\x32\x0b.InfoReport\"2\n\x0eReportResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"4\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t2k\n\rMonsitService\x12/\n\x08Register\x12\x10.RegisterRequest\x1a\x11.RegisterResponse\x12)\n\x06Report\x12\x0e.ReportRequest\x1a\x0f.ReportResponseB\x03\x90\x01\x01')
 
 
 
 
-_CPUINFO = descriptor.Descriptor(
-  name='CPUInfo',
-  full_name='CPUInfo',
+_INFOREPORT = descriptor.Descriptor(
+  name='InfoReport',
+  full_name='InfoReport',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     descriptor.FieldDescriptor(
-      name='name', full_name='CPUInfo.name', index=0,
-      number=1, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=unicode("", "utf-8"),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='user_count', full_name='CPUInfo.user_count', index=1,
-      number=2, type=5, cpp_type=1, label=2,
+      name='id', full_name='InfoReport.id', index=0,
+      number=1, type=13, cpp_type=3, label=2,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='nice_count', full_name='CPUInfo.nice_count', index=2,
-      number=3, type=5, cpp_type=1, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='sys_count', full_name='CPUInfo.sys_count', index=3,
-      number=4, type=5, cpp_type=1, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='idle_count', full_name='CPUInfo.idle_count', index=4,
-      number=5, type=5, cpp_type=1, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='iowait_count', full_name='CPUInfo.iowait_count', index=5,
-      number=6, type=5, cpp_type=1, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='total_count', full_name='CPUInfo.total_count', index=6,
-      number=7, type=5, cpp_type=1, label=2,
-      has_default_value=False, default_value=0,
+      name='info', full_name='InfoReport.info', index=1,
+      number=2, type=12, cpp_type=9, label=2,
+      has_default_value=False, default_value="",
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -83,43 +48,50 @@ _CPUINFO = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=17,
-  serialized_end=162,
+  serialized_start=16,
+  serialized_end=54,
 )
 
 
-_NETINFO = descriptor.Descriptor(
-  name='NetInfo',
-  full_name='NetInfo',
+_STATREPORT_YAXISVALUE = descriptor.Descriptor(
+  name='YAxisValue',
+  full_name='StatReport.YAxisValue',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     descriptor.FieldDescriptor(
-      name='name', full_name='NetInfo.name', index=0,
+      name='name', full_name='StatReport.YAxisValue.name', index=0,
       number=1, type=9, cpp_type=9, label=2,
       has_default_value=False, default_value=unicode("", "utf-8"),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='ip', full_name='NetInfo.ip', index=1,
-      number=2, type=9, cpp_type=9, label=2,
+      name='num_value', full_name='StatReport.YAxisValue.num_value', index=1,
+      number=2, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='double_value', full_name='StatReport.YAxisValue.double_value', index=2,
+      number=3, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='str_value', full_name='StatReport.YAxisValue.str_value', index=3,
+      number=4, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=unicode("", "utf-8"),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='recv_byte', full_name='NetInfo.recv_byte', index=2,
-      number=3, type=3, cpp_type=2, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='send_byte', full_name='NetInfo.send_byte', index=3,
-      number=4, type=3, cpp_type=2, label=2,
-      has_default_value=False, default_value=0,
+      name='reserve_value', full_name='StatReport.YAxisValue.reserve_value', index=4,
+      number=5, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value="",
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -132,341 +104,49 @@ _NETINFO = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=164,
-  serialized_end=237,
+  serialized_start=146,
+  serialized_end=255,
 )
 
-
-_VIRTUALMEMINFO = descriptor.Descriptor(
-  name='VirtualMemInfo',
-  full_name='VirtualMemInfo',
+_STATREPORT = descriptor.Descriptor(
+  name='StatReport',
+  full_name='StatReport',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     descriptor.FieldDescriptor(
-      name='total', full_name='VirtualMemInfo.total', index=0,
-      number=1, type=3, cpp_type=2, label=2,
+      name='id', full_name='StatReport.id', index=0,
+      number=1, type=13, cpp_type=3, label=2,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='available', full_name='VirtualMemInfo.available', index=1,
+      name='datetime', full_name='StatReport.datetime', index=1,
       number=2, type=3, cpp_type=2, label=2,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='used', full_name='VirtualMemInfo.used', index=2,
-      number=3, type=3, cpp_type=2, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='percent', full_name='VirtualMemInfo.percent', index=3,
-      number=4, type=5, cpp_type=1, label=2,
-      has_default_value=False, default_value=0,
+      name='yaxis_value', full_name='StatReport.yaxis_value', index=2,
+      number=3, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
   ],
   extensions=[
   ],
-  nested_types=[],
+  nested_types=[_STATREPORT_YAXISVALUE, ],
   enum_types=[
   ],
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=239,
-  serialized_end=320,
-)
-
-
-_SWAPMEMINFO = descriptor.Descriptor(
-  name='SwapMemInfo',
-  full_name='SwapMemInfo',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    descriptor.FieldDescriptor(
-      name='total', full_name='SwapMemInfo.total', index=0,
-      number=1, type=3, cpp_type=2, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='free', full_name='SwapMemInfo.free', index=1,
-      number=2, type=3, cpp_type=2, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='used', full_name='SwapMemInfo.used', index=2,
-      number=3, type=3, cpp_type=2, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='percent', full_name='SwapMemInfo.percent', index=3,
-      number=4, type=5, cpp_type=1, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  options=None,
-  is_extendable=False,
-  extension_ranges=[],
-  serialized_start=322,
-  serialized_end=395,
-)
-
-
-_MEMINFO = descriptor.Descriptor(
-  name='MemInfo',
-  full_name='MemInfo',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    descriptor.FieldDescriptor(
-      name='virtual_mem', full_name='MemInfo.virtual_mem', index=0,
-      number=1, type=11, cpp_type=10, label=2,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='swap_mem', full_name='MemInfo.swap_mem', index=1,
-      number=2, type=11, cpp_type=10, label=2,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  options=None,
-  is_extendable=False,
-  extension_ranges=[],
-  serialized_start=397,
-  serialized_end=476,
-)
-
-
-_DISKINFO_IOCOUNTER = descriptor.Descriptor(
-  name='IOCounter',
-  full_name='DiskInfo.IOCounter',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    descriptor.FieldDescriptor(
-      name='read_count', full_name='DiskInfo.IOCounter.read_count', index=0,
-      number=1, type=4, cpp_type=4, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='write_count', full_name='DiskInfo.IOCounter.write_count', index=1,
-      number=2, type=4, cpp_type=4, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='read_bytes', full_name='DiskInfo.IOCounter.read_bytes', index=2,
-      number=3, type=4, cpp_type=4, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='write_bytes', full_name='DiskInfo.IOCounter.write_bytes', index=3,
-      number=4, type=4, cpp_type=4, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='read_time', full_name='DiskInfo.IOCounter.read_time', index=4,
-      number=5, type=4, cpp_type=4, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='write_time', full_name='DiskInfo.IOCounter.write_time', index=5,
-      number=6, type=4, cpp_type=4, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  options=None,
-  is_extendable=False,
-  extension_ranges=[],
-  serialized_start=632,
-  serialized_end=764,
-)
-
-_DISKINFO_USAGEINFO = descriptor.Descriptor(
-  name='UsageInfo',
-  full_name='DiskInfo.UsageInfo',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    descriptor.FieldDescriptor(
-      name='total', full_name='DiskInfo.UsageInfo.total', index=0,
-      number=1, type=4, cpp_type=4, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='used', full_name='DiskInfo.UsageInfo.used', index=1,
-      number=2, type=4, cpp_type=4, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='free', full_name='DiskInfo.UsageInfo.free', index=2,
-      number=3, type=4, cpp_type=4, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='percent', full_name='DiskInfo.UsageInfo.percent', index=3,
-      number=4, type=13, cpp_type=3, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  options=None,
-  is_extendable=False,
-  extension_ranges=[],
-  serialized_start=766,
-  serialized_end=837,
-)
-
-_DISKINFO_BASICINFO = descriptor.Descriptor(
-  name='BasicInfo',
-  full_name='DiskInfo.BasicInfo',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    descriptor.FieldDescriptor(
-      name='mount_point', full_name='DiskInfo.BasicInfo.mount_point', index=0,
-      number=1, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=unicode("", "utf-8"),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='fs_type', full_name='DiskInfo.BasicInfo.fs_type', index=1,
-      number=2, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=unicode("", "utf-8"),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='options', full_name='DiskInfo.BasicInfo.options', index=2,
-      number=3, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=unicode("", "utf-8"),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  options=None,
-  is_extendable=False,
-  extension_ranges=[],
-  serialized_start=839,
-  serialized_end=905,
-)
-
-_DISKINFO = descriptor.Descriptor(
-  name='DiskInfo',
-  full_name='DiskInfo',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    descriptor.FieldDescriptor(
-      name='device_name', full_name='DiskInfo.device_name', index=0,
-      number=1, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=unicode("", "utf-8"),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='io_counters', full_name='DiskInfo.io_counters', index=1,
-      number=2, type=11, cpp_type=10, label=2,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='usage', full_name='DiskInfo.usage', index=2,
-      number=3, type=11, cpp_type=10, label=2,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='basic_info', full_name='DiskInfo.basic_info', index=3,
-      number=4, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-  ],
-  extensions=[
-  ],
-  nested_types=[_DISKINFO_IOCOUNTER, _DISKINFO_USAGEINFO, _DISKINFO_BASICINFO, ],
-  enum_types=[
-  ],
-  options=None,
-  is_extendable=False,
-  extension_ranges=[],
-  serialized_start=479,
-  serialized_end=905,
+  serialized_start=57,
+  serialized_end=255,
 )
 
 
@@ -478,43 +158,22 @@ _REPORTREQUEST = descriptor.Descriptor(
   containing_type=None,
   fields=[
     descriptor.FieldDescriptor(
-      name='host_name', full_name='ReportRequest.host_name', index=0,
-      number=1, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=unicode("", "utf-8"),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='datetime', full_name='ReportRequest.datetime', index=1,
-      number=2, type=3, cpp_type=2, label=2,
+      name='host_id', full_name='ReportRequest.host_id', index=0,
+      number=1, type=4, cpp_type=4, label=2,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='cpu_infos', full_name='ReportRequest.cpu_infos', index=2,
+      name='stat', full_name='ReportRequest.stat', index=1,
+      number=2, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='basic_infos', full_name='ReportRequest.basic_infos', index=2,
       number=3, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='net_infos', full_name='ReportRequest.net_infos', index=3,
-      number=4, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='mem_info', full_name='ReportRequest.mem_info', index=4,
-      number=5, type=11, cpp_type=10, label=2,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='disk_infos', full_name='ReportRequest.disk_infos', index=5,
-      number=6, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -528,8 +187,8 @@ _REPORTREQUEST = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=908,
-  serialized_end=1077,
+  serialized_start=257,
+  serialized_end=350,
 )
 
 
@@ -563,8 +222,8 @@ _REPORTRESPONSE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=1079,
-  serialized_end=1129,
+  serialized_start=352,
+  serialized_end=402,
 )
 
 
@@ -591,8 +250,8 @@ _REGISTERREQUEST = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=1131,
-  serialized_end=1167,
+  serialized_start=404,
+  serialized_end=440,
 )
 
 
@@ -626,86 +285,38 @@ _REGISTERRESPONSE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=1169,
-  serialized_end=1221,
+  serialized_start=442,
+  serialized_end=494,
 )
 
-_MEMINFO.fields_by_name['virtual_mem'].message_type = _VIRTUALMEMINFO
-_MEMINFO.fields_by_name['swap_mem'].message_type = _SWAPMEMINFO
-_DISKINFO_IOCOUNTER.containing_type = _DISKINFO;
-_DISKINFO_USAGEINFO.containing_type = _DISKINFO;
-_DISKINFO_BASICINFO.containing_type = _DISKINFO;
-_DISKINFO.fields_by_name['io_counters'].message_type = _DISKINFO_IOCOUNTER
-_DISKINFO.fields_by_name['usage'].message_type = _DISKINFO_USAGEINFO
-_DISKINFO.fields_by_name['basic_info'].message_type = _DISKINFO_BASICINFO
-_REPORTREQUEST.fields_by_name['cpu_infos'].message_type = _CPUINFO
-_REPORTREQUEST.fields_by_name['net_infos'].message_type = _NETINFO
-_REPORTREQUEST.fields_by_name['mem_info'].message_type = _MEMINFO
-_REPORTREQUEST.fields_by_name['disk_infos'].message_type = _DISKINFO
-DESCRIPTOR.message_types_by_name['CPUInfo'] = _CPUINFO
-DESCRIPTOR.message_types_by_name['NetInfo'] = _NETINFO
-DESCRIPTOR.message_types_by_name['VirtualMemInfo'] = _VIRTUALMEMINFO
-DESCRIPTOR.message_types_by_name['SwapMemInfo'] = _SWAPMEMINFO
-DESCRIPTOR.message_types_by_name['MemInfo'] = _MEMINFO
-DESCRIPTOR.message_types_by_name['DiskInfo'] = _DISKINFO
+_STATREPORT_YAXISVALUE.containing_type = _STATREPORT;
+_STATREPORT.fields_by_name['yaxis_value'].message_type = _STATREPORT_YAXISVALUE
+_REPORTREQUEST.fields_by_name['stat'].message_type = _STATREPORT
+_REPORTREQUEST.fields_by_name['basic_infos'].message_type = _INFOREPORT
+DESCRIPTOR.message_types_by_name['InfoReport'] = _INFOREPORT
+DESCRIPTOR.message_types_by_name['StatReport'] = _STATREPORT
 DESCRIPTOR.message_types_by_name['ReportRequest'] = _REPORTREQUEST
 DESCRIPTOR.message_types_by_name['ReportResponse'] = _REPORTRESPONSE
 DESCRIPTOR.message_types_by_name['RegisterRequest'] = _REGISTERREQUEST
 DESCRIPTOR.message_types_by_name['RegisterResponse'] = _REGISTERRESPONSE
 
-class CPUInfo(message.Message):
+class InfoReport(message.Message):
   __metaclass__ = reflection.GeneratedProtocolMessageType
-  DESCRIPTOR = _CPUINFO
+  DESCRIPTOR = _INFOREPORT
   
-  # @@protoc_insertion_point(class_scope:CPUInfo)
+  # @@protoc_insertion_point(class_scope:InfoReport)
 
-class NetInfo(message.Message):
-  __metaclass__ = reflection.GeneratedProtocolMessageType
-  DESCRIPTOR = _NETINFO
-  
-  # @@protoc_insertion_point(class_scope:NetInfo)
-
-class VirtualMemInfo(message.Message):
-  __metaclass__ = reflection.GeneratedProtocolMessageType
-  DESCRIPTOR = _VIRTUALMEMINFO
-  
-  # @@protoc_insertion_point(class_scope:VirtualMemInfo)
-
-class SwapMemInfo(message.Message):
-  __metaclass__ = reflection.GeneratedProtocolMessageType
-  DESCRIPTOR = _SWAPMEMINFO
-  
-  # @@protoc_insertion_point(class_scope:SwapMemInfo)
-
-class MemInfo(message.Message):
-  __metaclass__ = reflection.GeneratedProtocolMessageType
-  DESCRIPTOR = _MEMINFO
-  
-  # @@protoc_insertion_point(class_scope:MemInfo)
-
-class DiskInfo(message.Message):
+class StatReport(message.Message):
   __metaclass__ = reflection.GeneratedProtocolMessageType
   
-  class IOCounter(message.Message):
+  class YAxisValue(message.Message):
     __metaclass__ = reflection.GeneratedProtocolMessageType
-    DESCRIPTOR = _DISKINFO_IOCOUNTER
+    DESCRIPTOR = _STATREPORT_YAXISVALUE
     
-    # @@protoc_insertion_point(class_scope:DiskInfo.IOCounter)
+    # @@protoc_insertion_point(class_scope:StatReport.YAxisValue)
+  DESCRIPTOR = _STATREPORT
   
-  class UsageInfo(message.Message):
-    __metaclass__ = reflection.GeneratedProtocolMessageType
-    DESCRIPTOR = _DISKINFO_USAGEINFO
-    
-    # @@protoc_insertion_point(class_scope:DiskInfo.UsageInfo)
-  
-  class BasicInfo(message.Message):
-    __metaclass__ = reflection.GeneratedProtocolMessageType
-    DESCRIPTOR = _DISKINFO_BASICINFO
-    
-    # @@protoc_insertion_point(class_scope:DiskInfo.BasicInfo)
-  DESCRIPTOR = _DISKINFO
-  
-  # @@protoc_insertion_point(class_scope:DiskInfo)
+  # @@protoc_insertion_point(class_scope:StatReport)
 
 class ReportRequest(message.Message):
   __metaclass__ = reflection.GeneratedProtocolMessageType
@@ -738,8 +349,8 @@ _MONSITSERVICE = descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=1223,
-  serialized_end=1330,
+  serialized_start=496,
+  serialized_end=603,
   methods=[
   descriptor.MethodDescriptor(
     name='Register',
