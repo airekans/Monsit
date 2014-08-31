@@ -16,14 +16,14 @@ message StatReport {
     }
 
     required uint32 id = 1;
-    required int64 datetime = 2;  // x axis
-    repeated YAxisValue yaxis_value = 3;
+    repeated YAxisValue y_axis_value = 2;
 }
 
 message ReportRequest {
     required uint64 host_id = 1;
-    repeated StatReport stat = 2;
-    repeated InfoReport basic_infos = 3;
+    required int64 datetime = 2; // use this as x axis by default
+    repeated StatReport stat = 3;
+    repeated InfoReport basic_infos = 4;
 }
 
 message ReportResponse {

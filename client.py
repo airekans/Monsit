@@ -11,72 +11,45 @@ from monsit.proto import monsit_pb2
 
 def get_register_info():
     reg_info = monsit_pb2.RegisterRequest()
-    reg_info.host_name = socket.gethostname()
+    reg_info.host_name = socket.getfqdn()
     return reg_info
 
 
+def get_cpu_usage(cpu_stat, last_cpu_stat):
+    used_diff = ((cpu_stat['user'] + cpu_stat['sys'] + cpu_stat['nice']) -
+                 (last_cpu_stat['user'] + last_cpu_stat['sys'] + last_cpu_stat['nice']))
+    total_diff = cpu_stat['total'] - last_cpu_stat['total']
+    return used_diff * 100 / total_diff
+
+
+_last_stat = {}
+_CPU_ID = 1
+
+
 def collect_machine_info(is_first_time):
+    global _last_stat
+
     machine_info = monsit_pb2.ReportRequest()
-    machine_info.host_name = socket.gethostname()
 
     cpu_stats = cpu.get_cpu_stat()
-    for name, stat in cpu_stats.iteritems():
-        cpu_info = machine_info.cpu_infos.add()
-        cpu_info.name = name
-        cpu_info.user_count = stat['user']
-        cpu_info.nice_count = stat['nice']
-        cpu_info.sys_count = stat['sys']
-        cpu_info.idle_count = stat['idle']
-        cpu_info.iowait_count = stat['iowait']
-        cpu_info.total_count = stat['total']
+    cpu_stat = machine_info.stat.add()
+    cpu_stat.id = _CPU_ID
+    if 'cpu' in _last_stat:
+        last_cpu_stats = _last_stat['cpu']
+        for name, stat in cpu_stats.iteritems():
+            last_stat = last_cpu_stats[name]
+            cpu_usage = get_cpu_usage(stat, last_stat)
 
-    net_infos = net.get_netdevs()
-    for dev_name, dev_info in net_infos.iteritems():
-        net_info = machine_info.net_infos.add()
-        net_info.name = dev_name
-        net_info.ip = dev_info.ip
-        net_info.recv_byte = dev_info.recv_byte
-        net_info.send_byte = dev_info.send_byte
+            y_value = cpu_stat.y_axis_value.add()
+            y_value.name = name
+            y_value.num_value = cpu_usage
+    else:  # the first time should set all to 0
+        for name, stat in cpu_stats.iteritems():
+            y_value = cpu_stat.y_axis_value.add()
+            y_value.name = name
+            y_value.num_value = 0
 
-    vmem_info, swap_info = memory.get_mem_stat()
-    mem_info = machine_info.mem_info
-    mem_info.virtual_mem.total = vmem_info.total
-    mem_info.virtual_mem.available = vmem_info.available
-    mem_info.virtual_mem.used = vmem_info.used
-    mem_info.virtual_mem.percent = int(vmem_info.percent)
-    mem_info.swap_mem.total = swap_info.total
-    mem_info.swap_mem.free = swap_info.free
-    mem_info.swap_mem.used = swap_info.used
-    mem_info.swap_mem.percent = int(swap_info.percent)
-
-    disk_io_counters = disk.get_io_counters()
-    disk_basic_infos = disk.get_partitions()
-    for info in disk_basic_infos:
-        dev_name = info.device
-        dev_name = dev_name.split('/')[-1]
-        if dev_name not in disk_io_counters:
-            continue
-
-        disk_io = disk_io_counters[dev_name]
-        disk_info = machine_info.disk_infos.add()
-        disk_info.device_name = dev_name
-        disk_info.io_counters.read_count = disk_io.read_count
-        disk_info.io_counters.write_count = disk_io.write_count
-        disk_info.io_counters.read_bytes = disk_io.read_bytes
-        disk_info.io_counters.write_bytes = disk_io.write_bytes
-        disk_info.io_counters.read_time = disk_io.read_time
-        disk_info.io_counters.write_time = disk_io.write_time
-
-        disk_usage = disk.get_usage(info.mountpoint)
-        disk_info.usage.total = disk_usage.total
-        disk_info.usage.used = disk_usage.used
-        disk_info.usage.free = disk_usage.free
-        disk_info.usage.percent = int(disk_usage.percent)
-
-        if is_first_time:
-            disk_info.basic_info.mount_point = info.mountpoint
-            disk_info.basic_info.fs_type = info.fstype
-            disk_info.basic_info.options = info.opts
+    _last_stat['cpu'] = cpu_stats
 
     machine_info.datetime = int(time.time())
 
@@ -90,15 +63,21 @@ def collect_thread(master_addr, interval):
 
     # first register to the master
     req = get_register_info()
-    controller = rpc.RpcController()
+    controller = rpc.RpcController(method_timeout=10)
     rsp = stub.Register(controller, req)
-    if rsp.return_code != 0:
+    if rsp is None:
+        print 'Failed to register to master'
+        sys.exit(1)
+    elif rsp.return_code != 0:
         print 'Failed to register to master: ', rsp.msg
         sys.exit(1)
+
+    host_id = rsp.host_id
 
     is_first_time = True
     while True:
         req = collect_machine_info(is_first_time)
+        req.host_id = host_id
         is_first_time = False
         controller = rpc.RpcController()
         rsp = stub.Report(controller, req)

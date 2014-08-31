@@ -13,7 +13,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='monsit.proto',
   package='',
-  serialized_pb='\n\x0cmonsit.proto\"&\n\nInfoReport\x12\n\n\x02id\x18\x01 \x02(\r\x12\x0c\n\x04info\x18\x02 \x02(\x0c\"\xc6\x01\n\nStatReport\x12\n\n\x02id\x18\x01 \x02(\r\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12+\n\x0byaxis_value\x18\x03 \x03(\x0b\x32\x16.StatReport.YAxisValue\x1am\n\nYAxisValue\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x11\n\tnum_value\x18\x02 \x01(\x03\x12\x14\n\x0c\x64ouble_value\x18\x03 \x01(\x01\x12\x11\n\tstr_value\x18\x04 \x01(\t\x12\x15\n\rreserve_value\x18\x05 \x01(\x0c\"]\n\rReportRequest\x12\x0f\n\x07host_id\x18\x01 \x02(\x04\x12\x19\n\x04stat\x18\x02 \x03(\x0b\x32\x0b.StatReport\x12 \n\x0b\x62\x61sic_infos\x18\x03 \x03(\x0b\x32\x0b.InfoReport\"2\n\x0eReportResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"E\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\x12\x0f\n\x07host_id\x18\x03 \x02(\x04\x32k\n\rMonsitService\x12/\n\x08Register\x12\x10.RegisterRequest\x1a\x11.RegisterResponse\x12)\n\x06Report\x12\x0e.ReportRequest\x1a\x0f.ReportResponseB\x03\x90\x01\x01')
+  serialized_pb='\n\x0cmonsit.proto\"&\n\nInfoReport\x12\n\n\x02id\x18\x01 \x02(\r\x12\x0c\n\x04info\x18\x02 \x02(\x0c\"\xb5\x01\n\nStatReport\x12\n\n\x02id\x18\x01 \x02(\r\x12,\n\x0cy_axis_value\x18\x02 \x03(\x0b\x32\x16.StatReport.YAxisValue\x1am\n\nYAxisValue\x12\x0c\n\x04name\x18\x01 \x02(\t\x12\x11\n\tnum_value\x18\x02 \x01(\x03\x12\x14\n\x0c\x64ouble_value\x18\x03 \x01(\x01\x12\x11\n\tstr_value\x18\x04 \x01(\t\x12\x15\n\rreserve_value\x18\x05 \x01(\x0c\"o\n\rReportRequest\x12\x0f\n\x07host_id\x18\x01 \x02(\x04\x12\x10\n\x08\x64\x61tetime\x18\x02 \x02(\x03\x12\x19\n\x04stat\x18\x03 \x03(\x0b\x32\x0b.StatReport\x12 \n\x0b\x62\x61sic_infos\x18\x04 \x03(\x0b\x32\x0b.InfoReport\"2\n\x0eReportResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\"$\n\x0fRegisterRequest\x12\x11\n\thost_name\x18\x01 \x02(\t\"E\n\x10RegisterResponse\x12\x13\n\x0breturn_code\x18\x01 \x02(\x05\x12\x0b\n\x03msg\x18\x02 \x02(\t\x12\x0f\n\x07host_id\x18\x03 \x02(\x04\x32k\n\rMonsitService\x12/\n\x08Register\x12\x10.RegisterRequest\x1a\x11.RegisterResponse\x12)\n\x06Report\x12\x0e.ReportRequest\x1a\x0f.ReportResponseB\x03\x90\x01\x01')
 
 
 
@@ -104,8 +104,8 @@ _STATREPORT_YAXISVALUE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=146,
-  serialized_end=255,
+  serialized_start=129,
+  serialized_end=238,
 )
 
 _STATREPORT = descriptor.Descriptor(
@@ -123,15 +123,8 @@ _STATREPORT = descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='datetime', full_name='StatReport.datetime', index=1,
-      number=2, type=3, cpp_type=2, label=2,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    descriptor.FieldDescriptor(
-      name='yaxis_value', full_name='StatReport.yaxis_value', index=2,
-      number=3, type=11, cpp_type=10, label=3,
+      name='y_axis_value', full_name='StatReport.y_axis_value', index=1,
+      number=2, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -146,7 +139,7 @@ _STATREPORT = descriptor.Descriptor(
   is_extendable=False,
   extension_ranges=[],
   serialized_start=57,
-  serialized_end=255,
+  serialized_end=238,
 )
 
 
@@ -165,15 +158,22 @@ _REPORTREQUEST = descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='stat', full_name='ReportRequest.stat', index=1,
-      number=2, type=11, cpp_type=10, label=3,
+      name='datetime', full_name='ReportRequest.datetime', index=1,
+      number=2, type=3, cpp_type=2, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='stat', full_name='ReportRequest.stat', index=2,
+      number=3, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='basic_infos', full_name='ReportRequest.basic_infos', index=2,
-      number=3, type=11, cpp_type=10, label=3,
+      name='basic_infos', full_name='ReportRequest.basic_infos', index=3,
+      number=4, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -187,8 +187,8 @@ _REPORTREQUEST = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=257,
-  serialized_end=350,
+  serialized_start=240,
+  serialized_end=351,
 )
 
 
@@ -222,8 +222,8 @@ _REPORTRESPONSE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=352,
-  serialized_end=402,
+  serialized_start=353,
+  serialized_end=403,
 )
 
 
@@ -250,8 +250,8 @@ _REGISTERREQUEST = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=404,
-  serialized_end=440,
+  serialized_start=405,
+  serialized_end=441,
 )
 
 
@@ -292,12 +292,12 @@ _REGISTERRESPONSE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=442,
-  serialized_end=511,
+  serialized_start=443,
+  serialized_end=512,
 )
 
 _STATREPORT_YAXISVALUE.containing_type = _STATREPORT;
-_STATREPORT.fields_by_name['yaxis_value'].message_type = _STATREPORT_YAXISVALUE
+_STATREPORT.fields_by_name['y_axis_value'].message_type = _STATREPORT_YAXISVALUE
 _REPORTREQUEST.fields_by_name['stat'].message_type = _STATREPORT
 _REPORTREQUEST.fields_by_name['basic_infos'].message_type = _INFOREPORT
 DESCRIPTOR.message_types_by_name['InfoReport'] = _INFOREPORT
@@ -356,8 +356,8 @@ _MONSITSERVICE = descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=513,
-  serialized_end=620,
+  serialized_start=514,
+  serialized_end=621,
   methods=[
   descriptor.MethodDescriptor(
     name='Register',
