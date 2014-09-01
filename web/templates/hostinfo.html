@@ -49,8 +49,6 @@
 $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 var host_id = {{ host_id }};
 $(function() {
-    var stat_ids = [1, 2, 3];
-    var chart_types = ['cpu', 'net', 'vmem', 'swap', 'disk_io', 'disk_usage'];
     var chart_data = {
         cpu_chart: {title: 'Usage', y_axis_unit: '%',
                     stat_name: 'cpu', stat_id: 1,
@@ -61,13 +59,29 @@ $(function() {
                          stat_name: 'net_recv', stat_id: 2,
                          get_stat_func: function(stat) {
                              return stat;
-                        }},
+                         }},
         net_send_chart: {title: 'Send', y_axis_unit: 'KB',
                          stat_name: 'net_send', stat_id: 3,
                          get_stat_func: function(stat) {
                              return stat;
-                        }}
+                         }},
+        vmem_chart: {title: 'Physical Memory', y_axis_unit: '%',
+                     stat_name: 'vmem', stat_id: 4,
+                     get_stat_func: function(stat) {
+                         return stat;
+                     }},
+        swap_chart: {title: 'Swap Memory', y_axis_unit: '%',
+                     stat_name: 'swap', stat_id: 5,
+                     get_stat_func: function(stat) {
+                         return stat;
+                     }}
     };
+    var stat_ids = [];
+    for (var chart_id in chart_data)
+    {
+        var tmp_data = chart_data[chart_id];
+        stat_ids.push(tmp_data.stat_id);
+    }
 
     var charts = {};
     for (var chart_id in chart_data)

@@ -147,9 +147,13 @@ class DBConnection(object):
 
     def insert_builtin_fields(self, cursor, host_id):
         builtin_field_configs = [
-            ('cpu_total', 'Total Usage', ValueType.Int, '%'),
-            ('network_recv', 'Recv', ValueType.Int, 'KB'),
-            ('network_send', 'Send', ValueType.Int, 'KB')
+            ('cpu_total', 'Total Usage', ValueType.Int, '%'),  # 1
+            ('network_recv', 'Recv', ValueType.Int, 'KB'),  # 2
+            ('network_send', 'Send', ValueType.Int, 'KB'),  # 3
+            ('virtual_mem', 'Physical Memory', ValueType.Int, '%'),  # 4
+            ('swap_mem', 'Swap Memory', ValueType.Int, '%'),  # 5
+            ('disk_io_write', 'Write', ValueType.Int, 'KB'),  # 6
+            ('disk_io_read', 'Read', ValueType.Int, 'KB')  # 7
         ]
 
         hostinfo_tbl_name = TableNames.get_host_info_table_name(host_id)

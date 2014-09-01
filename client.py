@@ -28,6 +28,8 @@ _last_stat = {}
 _CPU_ID = 1
 _NETWORK_RECV_ID = 2
 _NETWORK_SEND_ID = 3
+_VIRTUAL_MEM_ID = 4
+_SWAP_MEM_ID = 5
 
 
 def collect_machine_info(is_first_time):
@@ -99,6 +101,20 @@ def collect_machine_info(is_first_time):
             y_value.num_value = 0
 
     _last_stat['net_send'] = net_stats
+
+    # get memory stats
+    vmem_info, swap_info = memory.get_mem_stat()
+    vmem_stat = machine_info.stat.add()
+    vmem_stat.id = _VIRTUAL_MEM_ID
+    y_value = vmem_stat.y_axis_value.add()
+    y_value.name = 'vmem'
+    y_value.num_value = int(vmem_info.percent)
+
+    swap_stat = machine_info.stat.add()
+    swap_stat.id = _SWAP_MEM_ID
+    y_value = swap_stat.y_axis_value.add()
+    y_value.name = 'swap'
+    y_value.num_value = int(swap_info.percent)
 
     machine_info.datetime = int(time.time())
 
