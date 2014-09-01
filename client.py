@@ -22,8 +22,12 @@ def get_cpu_usage(cpu_stat, last_cpu_stat):
     return used_diff * 100 / total_diff
 
 
+_COLLECT_INTERVAL = 30
+
 _last_stat = {}
 _CPU_ID = 1
+_NETWORK_RECV_ID = 2
+_NETWORK_SEND_ID = 3
 
 
 def collect_machine_info(is_first_time):
@@ -31,6 +35,7 @@ def collect_machine_info(is_first_time):
 
     machine_info = monsit_pb2.ReportRequest()
 
+    # get cpu stats
     cpu_stats = cpu.get_cpu_stat()
     cpu_stat = machine_info.stat.add()
     cpu_stat.id = _CPU_ID
@@ -50,6 +55,50 @@ def collect_machine_info(is_first_time):
             y_value.num_value = 0
 
     _last_stat['cpu'] = cpu_stats
+
+    # get network stats
+    net_stats = net.get_netdevs()
+    net_recv_stat = machine_info.stat.add()
+    net_recv_stat.id = _NETWORK_RECV_ID
+    if 'net_recv' in _last_stat:
+        last_net_recv_stats = _last_stat['net_recv']
+        for dev_name, dev_info in net_stats.iteritems():
+            last_recv_bytes = last_net_recv_stats[dev_name].recv_byte
+            cur_recv_bytes = dev_info.recv_byte
+            recv_rate = ((cur_recv_bytes - last_recv_bytes) /
+                         _COLLECT_INTERVAL / 1024)  # MB
+
+            y_value = net_recv_stat.y_axis_value.add()
+            y_value.name = dev_name
+            y_value.num_value = recv_rate
+    else:  # the first time should set all to 0
+        for dev_name, dev_info in net_stats.iteritems():
+            y_value = net_recv_stat.y_axis_value.add()
+            y_value.name = dev_name
+            y_value.num_value = 0
+
+    _last_stat['net_recv'] = net_stats
+
+    net_send_stat = machine_info.stat.add()
+    net_send_stat.id = _NETWORK_SEND_ID
+    if 'net_send' in _last_stat:
+        last_net_send_stats = _last_stat['net_send']
+        for dev_name, dev_info in net_stats.iteritems():
+            last_send_bytes = last_net_send_stats[dev_name].send_byte
+            cur_send_bytes = dev_info.send_byte
+            send_rate = ((cur_send_bytes - last_send_bytes) /
+                         _COLLECT_INTERVAL / 1024)  # MB
+
+            y_value = net_send_stat.y_axis_value.add()
+            y_value.name = dev_name
+            y_value.num_value = send_rate
+    else:  # the first time should set all to 0
+        for dev_name, dev_info in net_stats.iteritems():
+            y_value = net_send_stat.y_axis_value.add()
+            y_value.name = dev_name
+            y_value.num_value = 0
+
+    _last_stat['net_send'] = net_stats
 
     machine_info.datetime = int(time.time())
 
@@ -95,7 +144,7 @@ def main():
     opts, args = optparser.parse_args()
     master_addr = opts.master_ip + ':' + opts.master_port
 
-    job = gevent.spawn(collect_thread, master_addr, 30)
+    job = gevent.spawn(collect_thread, master_addr, _COLLECT_INTERVAL)
 
     try:
         job.join()

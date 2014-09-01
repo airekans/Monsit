@@ -1,5 +1,3 @@
-import datetime
-
 import mysql.connector
 
 from monsit.proto import monsit_pb2
@@ -10,9 +8,6 @@ _DB_CONFIG = {'host': '127.0.0.1',
               'password': 'monsitpass',
               'database': 'monsit'}
 _POOL_SIZE = mysql.connector.pooling.CNX_POOL_MAXSIZE
-
-_VALID_FIELDS = ['cpu', 'net', 'vmem', 'swap',
-                 'disk_io', 'disk_usage']
 
 
 class TableNames(object):
