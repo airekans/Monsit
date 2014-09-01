@@ -51,40 +51,26 @@ var host_id = {{ host_id }};
 $(function() {
     var chart_data = {
         cpu_chart: {title: 'Usage', y_axis_unit: '%',
-                    stat_name: 'cpu', stat_id: 1,
-                    get_stat_func: function(stat) {
-                        return stat;
-                    }},
+                    stat_name: 'cpu', stat_id: 1
+                   },
         net_recv_chart: {title: 'Recv', y_axis_unit: 'KB',
-                         stat_name: 'net_recv', stat_id: 2,
-                         get_stat_func: function(stat) {
-                             return stat;
-                         }},
+                         stat_name: 'net_recv', stat_id: 2
+                        },
         net_send_chart: {title: 'Send', y_axis_unit: 'KB',
-                         stat_name: 'net_send', stat_id: 3,
-                         get_stat_func: function(stat) {
-                             return stat;
-                         }},
+                         stat_name: 'net_send', stat_id: 3
+                        },
         vmem_chart: {title: 'Physical Memory', y_axis_unit: '%',
-                     stat_name: 'vmem', stat_id: 4,
-                     get_stat_func: function(stat) {
-                         return stat;
-                     }},
+                     stat_name: 'vmem', stat_id: 4
+                    },
         swap_chart: {title: 'Swap Memory', y_axis_unit: '%',
-                     stat_name: 'swap', stat_id: 5,
-                     get_stat_func: function(stat) {
-                         return stat;
-                     }},
+                     stat_name: 'swap', stat_id: 5
+                    },
         disk_io_write_chart: {title: 'Write', y_axis_unit: 'KB',
-                              stat_name: 'disk_io_write', stat_id: 6,
-                              get_stat_func: function(stat) {
-                                  return stat;
-                              }},
+                              stat_name: 'disk_io_write', stat_id: 6
+                             },
         disk_io_read_chart: {title: 'Read', y_axis_unit: 'KB',
-                             stat_name: 'disk_io_read', stat_id: 7,
-                             get_stat_func: function(stat) {
-                                 return stat;
-                             }}
+                             stat_name: 'disk_io_read', stat_id: 7
+                            }
     };
     var stat_ids = [];
     for (var chart_id in chart_data)
@@ -207,7 +193,7 @@ $(function() {
                     var stat_data = [];
                     for (var st in tmp_stat)
                     {
-                        stat_data.push(tmp_data.get_stat_func(tmp_stat[st]));
+                        stat_data.push(tmp_stat[st]);
                     }
 
                     option.series.push({
