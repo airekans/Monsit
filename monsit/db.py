@@ -295,7 +295,8 @@ class DBConnection(object):
 
                 this_stat[series][this_date.strftime(_DATE_FORMAT)] = y_value
 
-            stats[stat_id] = this_stat
+            stats[stat_id] = {'unit': stat_infos[stat_id]['y_unit'],
+                              'data': this_stat}
 
         #print stats
         return stats
