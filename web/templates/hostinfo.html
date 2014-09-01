@@ -35,10 +35,10 @@
 <h2 class="sub-header">Disk</h2>
 <div class="row placeholders">
     <div class="col-xs-12 col-sm-12 placeholder">
-      <div id="disk_io_chart" style="height:300px;"></div>
+      <div id="disk_io_write_chart" style="height:300px;"></div>
     </div>
     <div class="col-xs-12 col-sm-12 placeholder">
-      <div id="disk_usage_chart" style="height:300px;"></div>
+      <div id="disk_io_read_chart" style="height:300px;"></div>
     </div>
 </div>
 {% endblock %}
@@ -74,7 +74,17 @@ $(function() {
                      stat_name: 'swap', stat_id: 5,
                      get_stat_func: function(stat) {
                          return stat;
-                     }}
+                     }},
+        disk_io_write_chart: {title: 'Write', y_axis_unit: 'KB',
+                              stat_name: 'disk_io_write', stat_id: 6,
+                              get_stat_func: function(stat) {
+                                  return stat;
+                              }},
+        disk_io_read_chart: {title: 'Read', y_axis_unit: 'KB',
+                             stat_name: 'disk_io_read', stat_id: 7,
+                             get_stat_func: function(stat) {
+                                 return stat;
+                             }}
     };
     var stat_ids = [];
     for (var chart_id in chart_data)

@@ -25,11 +25,14 @@ def get_cpu_usage(cpu_stat, last_cpu_stat):
 _COLLECT_INTERVAL = 30
 
 _last_stat = {}
+
 _CPU_ID = 1
 _NETWORK_RECV_ID = 2
 _NETWORK_SEND_ID = 3
 _VIRTUAL_MEM_ID = 4
 _SWAP_MEM_ID = 5
+_DISK_WRITE_KB_ID = 6
+_DISK_READ_KB_ID = 7
 
 
 def collect_machine_info(is_first_time):
@@ -115,6 +118,82 @@ def collect_machine_info(is_first_time):
     y_value = swap_stat.y_axis_value.add()
     y_value.name = 'swap'
     y_value.num_value = int(swap_info.percent)
+
+    # get disk io stat
+    disk_io_counters = disk.get_io_counters()
+    disk_basic_infos = disk.get_partitions()
+
+    disk_io_write_stat = machine_info.stat.add()
+    disk_io_write_stat.id = _DISK_WRITE_KB_ID
+    if 'disk_io_write' in _last_stat:
+        last_disk_io_write_stat = _last_stat['disk_io_write']
+        for info in disk_basic_infos:
+            dev_name = info.device
+            dev_name = dev_name.split('/')[-1]
+            if dev_name not in disk_io_counters:
+                continue
+
+            last_disk_stat = last_disk_io_write_stat[dev_name]
+            last_write = last_disk_stat.write_bytes
+
+            cur_disk_stat = disk_io_counters[dev_name]
+            cur_write = cur_disk_stat.write_bytes
+
+            write_rate = (cur_write - last_write) / _COLLECT_INTERVAL / 1024  # KB
+            if write_rate < 0:
+                write_rate = 0
+
+            y_value = disk_io_write_stat.y_axis_value.add()
+            y_value.name = dev_name
+            y_value.num_value = write_rate
+    else:  # the first time should set all to 0
+        for info in disk_basic_infos:
+            dev_name = info.device
+            dev_name = dev_name.split('/')[-1]
+            if dev_name not in disk_io_counters:
+                continue
+
+            y_value = disk_io_write_stat.y_axis_value.add()
+            y_value.name = dev_name
+            y_value.num_value = 0
+
+    _last_stat['disk_io_write'] = disk_io_counters
+
+    disk_io_read_stat = machine_info.stat.add()
+    disk_io_read_stat.id = _DISK_READ_KB_ID
+    if 'disk_io_read' in _last_stat:
+        last_disk_io_read_stat = _last_stat['disk_io_read']
+        for info in disk_basic_infos:
+            dev_name = info.device
+            dev_name = dev_name.split('/')[-1]
+            if dev_name not in disk_io_counters:
+                continue
+
+            last_disk_stat = last_disk_io_read_stat[dev_name]
+            last_read = last_disk_stat.read_bytes
+
+            cur_disk_stat = disk_io_counters[dev_name]
+            cur_read = cur_disk_stat.read_bytes
+
+            read_rate = (cur_read - last_read) / _COLLECT_INTERVAL / 1024  # KB
+            if read_rate < 0:
+                read_rate = 0
+
+            y_value = disk_io_read_stat.y_axis_value.add()
+            y_value.name = dev_name
+            y_value.num_value = read_rate
+    else:  # the first time should set all to 0
+        for info in disk_basic_infos:
+            dev_name = info.device
+            dev_name = dev_name.split('/')[-1]
+            if dev_name not in disk_io_counters:
+                continue
+
+            y_value = disk_io_read_stat.y_axis_value.add()
+            y_value.name = dev_name
+            y_value.num_value = 0
+
+    _last_stat['disk_io_read'] = disk_io_counters
 
     machine_info.datetime = int(time.time())
 
