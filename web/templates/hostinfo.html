@@ -49,43 +49,14 @@
 $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 var host_id = {{ host_id }};
 $(function() {
+    var stat_ids = [1];
     var chart_types = ['cpu', 'net', 'vmem', 'swap', 'disk_io', 'disk_usage'];
     var chart_data = {
         cpu_chart: {title: 'Usage', y_axis_unit: '%',
-                    stat_name: 'cpu',
+                    stat_name: 'cpu', stat_id: 1,
                     get_stat_func: function(stat) {
                         return stat;
-                    }},
-        net_recv_chart: {title: 'Recv', y_axis_unit: 'KB',
-                         stat_name: 'net',
-                         get_stat_func: function(stat) {
-                             return stat.recv;
-                         }},
-        net_send_chart: {title: 'Send', y_axis_unit: 'KB',
-                         stat_name: 'net',
-                         get_stat_func: function(stat) {
-                             return stat.send;
-                         }},
-        vmem_chart: {title: 'Virtual Memory', y_axis_unit: '%',
-                     stat_name: 'vmem',
-                     get_stat_func: function(stat) {
-                         return stat;
-                     }},
-        swap_chart: {title: 'Swap Memory', y_axis_unit: '%',
-                     stat_name: 'swap',
-                     get_stat_func: function(stat) {
-                         return stat;
-                     }},
-        disk_io_chart: {title: 'IO Stat', y_axis_unit: 'KB',
-                     stat_name: 'disk_io',
-                     get_stat_func: function(stat) {
-                         return stat;
-                     }},
-        disk_usage_chart: {title: 'Usage', y_axis_unit: '%',
-                     stat_name: 'disk_usage',
-                     get_stat_func: function(stat) {
-                         return stat;
-                     }}
+                    }}
     };
 
     var charts = {};
@@ -97,12 +68,12 @@ $(function() {
         charts[chart_id] = tmp_chart;
     }
 
-    $.getJSON($SCRIPT_ROOT + '/_get_hostinfo', {type: chart_types, id: host_id},
+    $.getJSON($SCRIPT_ROOT + '/_get_hostinfo', {stat_ids: stat_ids, host_id: host_id},
         function(data) {
             for (var chart_id in chart_data)
             {
                 var tmp_data = chart_data[chart_id];
-                var stat = data.stats[tmp_data.stat_name];
+                var stat = data.stats[tmp_data.stat_id];
                 var names = [];
                 for (var name in stat)
                 {

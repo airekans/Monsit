@@ -494,114 +494,55 @@ class DBConnection(object):
         self.__cnx.commit()
         return True
 
-    def get_host_stats(self, host_id, fields):
+    def get_stat_infos(self, cursor, host_id):
+        select_stmt = "SELECT * FROM %s" % TableNames.get_host_info_table_name(host_id)
+        cursor.execute(select_stmt)
+
+        infos = {}
+        for res in cursor:
+            field_id = res[0]
+            infos[field_id] = {
+                'stat_name': res[1],
+                'chart_name': res[2],
+                'y_value_type': res[3],
+                'y_unit': res[4]
+            }
+
+        return infos
+
+    def get_host_stats(self, host_id, stat_ids):
         LAST_NUM_MIN = 30
+        _DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
+
         cursor = self.__cnx.cursor()
         stmt_template = ('SELECT * FROM %s' +
                          (' WHERE DATE_SUB(NOW(),INTERVAL %d MINUTE) <= datetime' % LAST_NUM_MIN) +
                          ' ORDER BY datetime ASC')
+        stat_infos = self.get_stat_infos(cursor, host_id)
         stats = {}
-        for field in fields:
-            if field in _VALID_FIELDS:
-                select_stmt = stmt_template % self.get_host_table_name(host_id, field)
-                if field == 'cpu':
-                    cursor.execute(select_stmt)
-                    cpu_infos = []
-                    for stat in cursor:
-                        cpu_info = monsit_pb2.CPUInfo(name=stat[1],
-                                                      user_count=stat[2],
-                                                      nice_count=stat[3],
-                                                      sys_count=stat[4],
-                                                      idle_count=stat[5],
-                                                      iowait_count=stat[6],
-                                                      total_count=stat[7])
-                        cpu_infos.append((stat[8], cpu_info))
+        for stat_id in stat_ids:
+            try:
+                stat_info = stat_infos[stat_id]
+            except KeyError, e:
+                print 'KeyError:', str(e)
+                continue
 
-                    stats[field] = cpu_infos
-                elif field == 'net':
-                    cursor.execute(select_stmt)
-                    net_infos = []
-                    try:
-                        for stat in cursor:
-                            net_info = monsit_pb2.NetInfo(name=stat[1],
-                                                          ip=stat[2],
-                                                          recv_byte=stat[4],
-                                                          send_byte=stat[5])
-                            net_infos.append((stat[3], net_info))
-                    except:
-                        import traceback
-                        traceback.print_exc()
-                        raise
+            stat_tbl_name = TableNames.get_stat_table_name(host_id, stat_id)
+            this_stat = {}
 
-                    stats[field] = net_infos
-                elif field == 'vmem':
-                    cursor.execute(select_stmt)
-                    vmem_infos = []
-                    try:
-                        for stat in cursor:
-                            vmem_info = monsit_pb2.VirtualMemInfo(total=stat[1],
-                                                                  available=stat[2],
-                                                                  used=stat[3],
-                                                                  percent=stat[4])
-                            vmem_infos.append((stat[5], vmem_info))
-                    except:
-                        import traceback
-                        traceback.print_exc()
-                        raise
+            stmt = stmt_template % stat_tbl_name
+            cursor.execute(stmt)
 
-                    stats[field] = vmem_infos
-                elif field == 'swap':
-                    cursor.execute(select_stmt)
-                    swap_infos = []
-                    try:
-                        for stat in cursor:
-                            swap_info = monsit_pb2.SwapMemInfo(total=stat[1],
-                                                               free=stat[2],
-                                                               used=stat[3],
-                                                               percent=stat[4])
-                            swap_infos.append((stat[5], swap_info))
-                    except:
-                        import traceback
-                        traceback.print_exc()
-                        raise
+            for res in cursor:
+                series = res[1]
+                y_value = res[2]
+                this_date = res[3]
+                if series not in this_stat:
+                    this_stat[series] = {}
 
-                    stats[field] = swap_infos
-                elif field == 'disk_io':
-                    cursor.execute(select_stmt)
-                    disk_io_infos = []
-                    try:
-                        for stat in cursor:
-                            disk_io_info = \
-                                monsit_pb2.DiskInfo.IOCounter(read_count=stat[2],
-                                                              write_count=stat[3],
-                                                              read_bytes=stat[4],
-                                                              write_bytes=stat[5],
-                                                              read_time=stat[6],
-                                                              write_time=stat[7])
-                            disk_io_infos.append((stat[8], disk_io_info, stat[1]))
-                    except:
-                        import traceback
-                        traceback.print_exc()
-                        raise
+                this_stat[series][this_date.strftime(_DATE_FORMAT)] = y_value
 
-                    stats[field] = disk_io_infos
-                elif field == 'disk_usage':
-                    cursor.execute(select_stmt)
-                    disk_usage_infos = []
-                    try:
-                        for stat in cursor:
-                            disk_usage_info = \
-                                monsit_pb2.DiskInfo.UsageInfo(total=stat[2],
-                                                              used=stat[3],
-                                                              free=stat[4],
-                                                              percent=stat[5])
-                            disk_usage_infos.append((stat[6], disk_usage_info, stat[1]))
-                    except:
-                        import traceback
-                        traceback.print_exc()
-                        raise
-
-                    stats[field] = disk_usage_infos
+            stats[stat_id] = this_stat
 
         #print stats
         return stats

@@ -81,78 +81,11 @@ _DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 @app.route('/_get_hostinfo', methods=['GET'])
 def ajax_hostinfo():
-    field_types = request.args.getlist('type[]')
-    host_id = request.args.get('id', 0, type=int)
-    host_stats = {}
-    with db.DBConnection() as cnx:
-        try:
-            db_host_stats = cnx.get_host_stats(host_id, field_types)
-        except:
-            print 'db error'
-            raise
+    stat_ids = request.args.getlist('stat_ids[]', type=int)
+    host_id = request.args.get('host_id', 0, type=int)
 
-        for field, db_stats in db_host_stats.iteritems():
-            if field == 'cpu':
-                host_stats['cpu'] = {}
-                cpu_stat = host_stats['cpu']
-                last_cpu_stat = {}
-                for date, cpu_info in db_stats:
-                    stat_time = date.strftime(_DATE_FORMAT)
-                    cpu_name = cpu_info.name
-                    if cpu_name not in cpu_stat:
-                        cpu_stat[cpu_name] = {}
-                    cpu_stat[cpu_name][stat_time] = \
-                        get_cpu_usage(cpu_info, last_cpu_stat.get(cpu_name, None))
-                    last_cpu_stat[cpu_name] = cpu_info
-            elif field == 'net':
-                host_stats['net'] = {}
-                net_stat = host_stats['net']
-                last_net_stat = {}
-                for date, net_info in db_stats:
-                    stat_time = date.strftime(_DATE_FORMAT)
-                    net_dev_name = net_info.name
-                    if net_dev_name not in net_stat:
-                        net_stat[net_dev_name] = {}
-                    net_stat[net_dev_name][stat_time] = \
-                        get_net_flow_stat((date, net_info),
-                                          last_net_stat.get(net_dev_name, None))
-                    last_net_stat[net_dev_name] = (date, net_info)
-            elif field == 'vmem':
-                host_stats['vmem'] = {}
-                vmem_stat = host_stats['vmem']
-                vmem_stat['vmem'] = {}
-                for date, vmem_info in db_stats:
-                    stat_time = date.strftime(_DATE_FORMAT)
-                    vmem_stat['vmem'][stat_time] = vmem_info.percent
-            elif field == 'swap':
-                host_stats['swap'] = {}
-                swap_stat = host_stats['swap']
-                swap_stat['swap'] = {}
-                for date, swap_info in db_stats:
-                    stat_time = date.strftime(_DATE_FORMAT)
-                    swap_stat['swap'][stat_time] = swap_info.percent
-            elif field == 'disk_io':
-                host_stats['disk_io'] = {}
-                disk_io_stat = host_stats['disk_io']
-                last_disk_io_stat = {}
-                for date, disk_io_info, device_name in db_stats:
-                    stat_time = date.strftime(_DATE_FORMAT)
-                    if device_name not in disk_io_stat:
-                        disk_io_stat[device_name] = {}
-                    disk_io_stat[device_name][stat_time] = \
-                        get_disk_io_stat((date, disk_io_info),
-                                         last_disk_io_stat.get(device_name, None))
-                    last_disk_io_stat[device_name] = (date, disk_io_info)
-            elif field == 'disk_usage':
-                host_stats['disk_usage'] = {}
-                disk_usage_stat = host_stats['disk_usage']
-                for date, disk_usage_info, device_name in db_stats:
-                    stat_time = date.strftime(_DATE_FORMAT)
-                    if device_name not in disk_usage_stat:
-                        disk_usage_stat[device_name] = {}
-                    disk_usage_stat[device_name][stat_time] = disk_usage_info.percent
-            else:
-                return jsonify(return_code=1)
+    with db.DBConnection() as cnx:
+        host_stats = cnx.get_host_stats(host_id, stat_ids)
 
     return jsonify(return_code=0, stats=host_stats)
 
