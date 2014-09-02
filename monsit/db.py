@@ -1,6 +1,5 @@
+import datetime
 import mysql.connector
-
-from monsit.proto import monsit_pb2
 
 
 _DB_CONFIG = {'host': '127.0.0.1',
@@ -265,9 +264,10 @@ class DBConnection(object):
 
         return infos
 
+    _DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
+
     def get_host_stats(self, host_id, stat_ids):
         LAST_NUM_MIN = 30
-        _DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
         cursor = self.__cnx.cursor()
         stmt_template = ('SELECT * FROM %s' +
@@ -293,7 +293,7 @@ class DBConnection(object):
                 if series not in this_stat:
                     this_stat[series] = {}
 
-                this_stat[series][this_date.strftime(_DATE_FORMAT)] = y_value
+                this_stat[series][this_date.strftime(DBConnection._DATE_FORMAT)] = y_value
 
             stats[stat_id] = {'unit': stat_infos[stat_id]['y_unit'],
                               'data': this_stat}
@@ -301,5 +301,37 @@ class DBConnection(object):
         #print stats
         return stats
 
-    def get_updated_stats(self, host_id, field_type, last_date):
-        return
+    def get_updated_stats(self, host_id, field_id, last_date):
+        try:
+            last_datetime = datetime.datetime.strptime(last_date,
+                                                       DBConnection._DATE_FORMAT)
+        except ValueError, e:
+            print 'date parsing error:', e
+            return None
+
+        cursor = self.__cnx.cursor()
+        stmt_template = ("SELECT * FROM %s"
+                         " WHERE datetime > '%s'"
+                         " ORDER BY datetime ASC")
+        stat_infos = self.get_stat_infos(cursor, host_id)
+        if field_id not in stat_infos:
+            print 'field_id not in stat_infos', field_id
+            return None
+
+        stat_tbl_name = TableNames.get_stat_table_name(host_id, field_id)
+        this_stat = {}
+
+        stmt = stmt_template % (stat_tbl_name, last_datetime)
+        cursor.execute(stmt)
+
+        for res in cursor:
+            series = res[1]
+            y_value = res[2]
+            this_date = res[3]
+            if series not in this_stat:
+                this_stat[series] = {}
+
+            this_stat[series][this_date.strftime(DBConnection._DATE_FORMAT)] = y_value
+
+        #print this_stat
+        return this_stat

@@ -90,9 +90,9 @@ $(function() {
 
     $.getJSON($SCRIPT_ROOT + '/_get_hostinfo', {stat_ids: stat_ids, host_id: host_id},
         function(data) {
-            for (var chart_id in chart_data)
+            for (var chart_name in chart_data)
             {
-                var tmp_data = chart_data[chart_id];
+                var tmp_data = chart_data[chart_name];
                 var stat_info = data.stats[tmp_data.stat_id];
                 var stat = stat_info.data;
                 var names = [];
@@ -108,11 +108,11 @@ $(function() {
                     time_record.latest_time = t;
                 }
 
-                var this_config = {is_auto_refresh: false, stat_type: tmp_data.stat_name,
+                var this_config = {is_auto_refresh: false, stat_id: tmp_data.stat_id,
                                    stat_names: names};
-                function on_click_auto_refresh(config, chart_id, time_record) {
-                    var stat_type = config.stat_type;
-                    var the_chart = charts[chart_id];
+                function on_click_auto_refresh(config, chart_name, time_record) {
+                    var stat_id = config.stat_id;
+                    var the_chart = charts[chart_name];
                     var is_set_interval = false;
                     var time_ticket = false;
                     return function () {
@@ -121,17 +121,33 @@ $(function() {
                             // auto refresh the chart
                             time_ticket = setInterval(function() {
                                 // connect the server and try to fetch the latest data
-                                var args = {id: host_id, type: stat_type,
+                                var args = {id: host_id, stat_id: stat_id,
                                             latest_time: time_record.latest_time};
                                 $.getJSON($SCRIPT_ROOT + '/_get_latest_info', args, function (data) {
-                                    the_chart.addData([[0, 2, false, false]]);
+                                    if (data.return_code == 0) {
+                                        var to_add_stats = [];
+                                        var stat = data.stats;
+                                        var stat_names = config.stat_names;
+                                        for (var name in stat) {
+                                            var name_i = stat_names.indexOf(name);
+                                            if (name_i < 0) {
+                                                continue;
+                                            }
+
+                                            for (var t in stat[name]) {
+                                                to_add_stats.push([name_i, stat[name][t], false, false]);
+                                                time_record.latest_time = t;
+                                            }
+                                        }
+                                        the_chart.addData(to_add_stats);
+                                    }
                                 });
                             }, 30000); // refresh every 30 seconds
                             is_set_interval = true;
                         } else {
                             // disable auto refresh
                             if (is_set_interval) {
-                                alert('disable auto refresh ' + chart_id);
+                                alert('disable auto refresh ' + chart_name);
                                 clearInterval(time_ticket);
                                 is_set_interval = false;
                             }
@@ -159,7 +175,7 @@ $(function() {
                             saveAsImage : {show: true},
                             autoRefresh : {show: true, title: '自动刷新',
                                            icon: 'image://static/img/octicons-sync.png',
-                                           onclick: on_click_auto_refresh(this_config, chart_id, time_record)}
+                                           onclick: on_click_auto_refresh(this_config, chart_name, time_record)}
                         }
                     },
                     dataZoom : {
@@ -209,8 +225,8 @@ $(function() {
                         }
                     });
                 }
-                charts[chart_id].hideLoading();
-                charts[chart_id].setOption(option);
+                charts[chart_name].hideLoading();
+                charts[chart_name].setOption(option);
             }
         });
 });
