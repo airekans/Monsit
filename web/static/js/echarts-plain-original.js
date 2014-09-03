@@ -24370,7 +24370,7 @@ define('echarts/component/toolbox',['require','./base','zrender/config','zrender
             var target = param.target.style.iconType;
             var featureHandler = option.toolbox.feature[target].onclick;
             if (typeof featureHandler === 'function') {
-                featureHandler(option);
+                featureHandler(option, param.target, zr);
             }
         }
 

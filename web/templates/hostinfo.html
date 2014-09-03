@@ -115,9 +115,15 @@ $(function() {
                     var the_chart = charts[chart_name];
                     var is_set_interval = false;
                     var time_ticket = false;
-                    return function () {
+                    return function (option, target, zr) {
                         config.is_auto_refresh = !config.is_auto_refresh;
                         if (config.is_auto_refresh) {
+                            zr.modShape(target.id, {style: {opacity: 0.8},
+                                                    highlightStyle: {opacity: 1,
+                                                                     text: "取消自动刷新"}
+                            });
+                            zr.refresh();
+
                             // auto refresh the chart
                             time_ticket = setInterval(function() {
                                 // connect the server and try to fetch the latest data
@@ -154,9 +160,13 @@ $(function() {
                             }, 30000); // refresh every 30 seconds
                             is_set_interval = true;
                         } else {
+                            zr.modShape(target.id, {style: {opacity: 0.2},
+                                                    highlightStyle: {opacity: 0.4, text: "自动刷新"}
+                            });
+                            zr.refresh();
+
                             // disable auto refresh
                             if (is_set_interval) {
-                                alert('disable auto refresh ' + chart_name);
                                 clearInterval(time_ticket);
                                 is_set_interval = false;
                             }
