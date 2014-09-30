@@ -1,7 +1,8 @@
 from gevent import monkey
 monkey.patch_all()
 
-from monsit import db, rpc
+from monsit import db
+from recall import rpc
 from monsit.proto import monsit_pb2
 import datetime
 

@@ -4,9 +4,9 @@ import optparse
 import sys
 
 import gevent
-from monsit import cpu, rpc, net, memory, disk
-
+from monsit import cpu, net, memory, disk
 from monsit.proto import monsit_pb2
+from recall import rpc
 
 
 def get_register_info():
