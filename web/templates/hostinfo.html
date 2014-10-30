@@ -49,6 +49,52 @@
 $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 var host_id = {{ host_id }};
 $(function() {
+    var auto_refresh_stat_ids = [];
+    var auto_refresh_time_ticket = -1;
+    var auto_refresh_interval = 30000;  // 30 seconds
+    var time_records = {};
+    var on_auto_refresh_funcs = {};
+    function add_auto_refresh_stat(stat_id, latest_time, on_get_data) {
+        if (auto_refresh_stat_ids.indexOf(stat_id) >= 0) {
+            return;
+        }
+        auto_refresh_stat_ids.push(stat_id);
+        time_records[stat_id] = latest_time;
+        on_auto_refresh_funcs[stat_id] = on_get_data;
+
+        if (auto_refresh_stat_ids.length == 1) {
+            auto_refresh_time_ticket = setInterval(function() {
+                var args = {id: host_id, stat_ids: auto_refresh_stat_ids,
+                            latest_time: auto_refresh_stat_ids.map(function(e) {
+                                return time_records[e];
+                            })};
+                $.getJSON($SCRIPT_ROOT + '/_get_latest_info', args, function(data) {
+                    if (data.return_code == 0) {
+                        var stat = data.stats;
+                        for (var stat_id in stat) {
+                            var func = on_auto_refresh_funcs[stat_id];
+                            func(stat[stat_id]);
+                        }
+                    }
+                });
+            }, auto_refresh_interval);
+        }
+        // if auto_refresh_stat_ids.length > 1, we just do nothing
+        // and next time when the timer runs, it will get the stat data
+    }
+
+    function remove_auto_refresh_stat(stat_id) {
+        var idx = auto_refresh_stat_ids.indexOf(stat_id);
+        if (idx < 0) {
+            return;
+        }
+
+        auto_refresh_stat_ids.splice(idx, 1); // remove stat_id
+        if (auto_refresh_stat_ids.length == 0) {
+            clearInterval(auto_refresh_time_ticket);
+        }
+    }
+
     var chart_data = {
         cpu_chart: {title: 'Usage',
                     stat_name: 'cpu', stat_id: 1
@@ -101,20 +147,17 @@ $(function() {
                     names.push(name);
                 }
                 var stat_times = [];
-                var time_record = {};
                 for (var t in stat[names[0]])
                 {
                     stat_times.push(t);
-                    time_record.latest_time = t;
+                    time_records[tmp_data.stat_id] = t;
                 }
 
                 var this_config = {is_auto_refresh: false, stat_id: tmp_data.stat_id,
                                    stat_names: names};
-                function on_click_auto_refresh(config, chart_name, time_record) {
+                function on_click_auto_refresh(config, chart_name) {
                     var stat_id = config.stat_id;
                     var the_chart = charts[chart_name];
-                    var is_set_interval = false;
-                    var time_ticket = false;
                     return function (option, target, zr) {
                         config.is_auto_refresh = !config.is_auto_refresh;
                         if (config.is_auto_refresh) {
@@ -125,40 +168,31 @@ $(function() {
                             zr.refresh();
 
                             // auto refresh the chart
-                            time_ticket = setInterval(function() {
-                                // connect the server and try to fetch the latest data
-                                var args = {id: host_id, stat_id: stat_id,
-                                            latest_time: time_record.latest_time};
-                                $.getJSON($SCRIPT_ROOT + '/_get_latest_info', args, function (data) {
-                                    if (data.return_code == 0) {
-                                        var to_add_stats = [];
-                                        var stat = data.stats;
-                                        var stat_names = config.stat_names;
-                                        var is_first = true;
-                                        for (var name in stat) {
-                                            var name_i = stat_names.indexOf(name);
-                                            if (name_i < 0) {
-                                                continue;
-                                            }
-
-                                            for (var t in stat[name]) {
-                                                var tmp = 1;
-                                                if (is_first) {
-                                                    tmp = [name_i, stat[name][t], false, false, t];
-                                                } else {
-                                                    tmp = [name_i, stat[name][t], false, false];
-                                                }
-                                                to_add_stats.push(tmp);
-                                                time_record.latest_time = t;
-                                            }
-
-                                            is_first = false;
-                                        }
-                                        the_chart.addData(to_add_stats);
+                            add_auto_refresh_stat(stat_id, time_records[stat_id], function(stat) {
+                                var to_add_stats = [];
+                                var stat_names = config.stat_names;
+                                var is_first = true;
+                                for (var name in stat) {
+                                    var name_i = stat_names.indexOf(name);
+                                    if (name_i < 0) {
+                                        continue;
                                     }
-                                });
-                            }, 30000); // refresh every 30 seconds
-                            is_set_interval = true;
+
+                                    for (var t in stat[name]) {
+                                        var tmp = 1;
+                                        if (is_first) {
+                                            tmp = [name_i, stat[name][t], false, false, t];
+                                        } else {
+                                            tmp = [name_i, stat[name][t], false, false];
+                                        }
+                                        to_add_stats.push(tmp);
+                                        time_records[stat_id] = t;
+                                    }
+
+                                    is_first = false;
+                                }
+                                the_chart.addData(to_add_stats);
+                            });
                         } else {
                             zr.modShape(target.id, {style: {opacity: 0.2},
                                                     highlightStyle: {opacity: 0.4, text: "自动刷新"}
@@ -166,10 +200,7 @@ $(function() {
                             zr.refresh();
 
                             // disable auto refresh
-                            if (is_set_interval) {
-                                clearInterval(time_ticket);
-                                is_set_interval = false;
-                            }
+                            remove_auto_refresh_stat(stat_id);
                         }
                     }
                 }
@@ -194,7 +225,7 @@ $(function() {
                             saveAsImage : {show: true},
                             autoRefresh : {show: true, title: '自动刷新',
                                            icon: 'image://static/img/octicons-sync.png',
-                                           onclick: on_click_auto_refresh(this_config, chart_name, time_record)}
+                                           onclick: on_click_auto_refresh(this_config, chart_name)}
                         }
                     },
                     dataZoom : {

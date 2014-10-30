@@ -2,7 +2,7 @@ from gevent import monkey
 monkey.patch_all()
 
 from monsit import db
-from recall import rpc
+from recall.server import RpcServer
 from monsit.proto import monsit_pb2
 import datetime
 
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     db.init()
 
     service = MonsitServiceImpl()
-    rpc_server = rpc.RpcServer(('0.0.0.0', 30002))
+    rpc_server = RpcServer(('0.0.0.0', 30002))
     rpc_server.register_service(service)
     try:
         rpc_server.run(print_stat_interval=60)

@@ -44,14 +44,14 @@ def ajax_hostinfo():
 
 @app.route('/_get_latest_info', methods=['GET'])
 def ajax_latest_info():
-    stat_id = request.args.get('stat_id', 0, type=int)
+    stat_ids = request.args.getlist('stat_ids[]', type=int)
     host_id = request.args.get('id', 0, type=int)
-    last_time = request.args.get('latest_time')
+    last_times = request.args.getlist('latest_time[]')
     #print 'stat_id', stat_id, 'host_id', host_id, 'last_time', last_time
 
     with db.DBConnection() as cnx:
         try:
-            latest_stats = cnx.get_updated_stats(host_id, stat_id, last_time)
+            latest_stats = cnx.get_updated_stats(host_id, stat_ids, last_times)
         except:
             print 'db error'
             return jsonify(return_code=1)

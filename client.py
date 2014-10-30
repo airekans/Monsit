@@ -6,7 +6,8 @@ import sys
 import gevent
 from monsit import cpu, net, memory, disk
 from monsit.proto import monsit_pb2
-from recall import rpc
+from recall.client import RpcClient
+from recall.controller import RpcController
 
 
 def get_register_info():
@@ -201,13 +202,13 @@ def collect_machine_info(is_first_time):
 
 
 def collect_thread(master_addr, interval):
-    rpc_client = rpc.RpcClient()
+    rpc_client = RpcClient()
     tcp_channel = rpc_client.get_tcp_channel(master_addr)
     stub = monsit_pb2.MonsitService_Stub(tcp_channel)
 
     # first register to the master
     req = get_register_info()
-    controller = rpc.RpcController(method_timeout=10)
+    controller = RpcController(method_timeout=10)
     rsp = stub.Register(controller, req)
     if rsp is None:
         print 'Failed to register to master'
@@ -223,7 +224,7 @@ def collect_thread(master_addr, interval):
         req = collect_machine_info(is_first_time)
         req.host_id = host_id
         is_first_time = False
-        controller = rpc.RpcController()
+        controller = RpcController()
         rsp = stub.Report(controller, req)
         print rsp
         gevent.sleep(interval)

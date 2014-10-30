@@ -301,37 +301,43 @@ class DBConnection(object):
         #print stats
         return stats
 
-    def get_updated_stats(self, host_id, field_id, last_date):
-        try:
-            last_datetime = datetime.datetime.strptime(last_date,
-                                                       DBConnection._DATE_FORMAT)
-        except ValueError, e:
-            print 'date parsing error:', e
-            return None
-
+    def get_updated_stats(self, host_id, stat_ids, last_dates):
         cursor = self.__cnx.cursor()
         stmt_template = ("SELECT * FROM %s"
                          " WHERE datetime > '%s'"
                          " ORDER BY datetime ASC")
         stat_infos = self.get_stat_infos(cursor, host_id)
-        if field_id not in stat_infos:
-            print 'field_id not in stat_infos', field_id
-            return None
+        stat_infos_set = set(stat_infos)
 
-        stat_tbl_name = TableNames.get_stat_table_name(host_id, field_id)
-        this_stat = {}
+        stats = {}
+        for stat_id, last_date in zip(stat_ids, last_dates):
+            if stat_id not in stat_infos_set:
+                print 'field_id not in stat_infos', host_id, stat_id
+                continue
 
-        stmt = stmt_template % (stat_tbl_name, last_datetime)
-        cursor.execute(stmt)
+            try:
+                last_datetime = datetime.datetime.strptime(
+                    last_date, DBConnection._DATE_FORMAT)
+            except ValueError, e:
+                print 'date parsing error:', e
+                continue
 
-        for res in cursor:
-            series = res[1]
-            y_value = res[2]
-            this_date = res[3]
-            if series not in this_stat:
-                this_stat[series] = {}
+            stat_tbl_name = TableNames.get_stat_table_name(host_id, stat_id)
+            this_stat = {}
 
-            this_stat[series][this_date.strftime(DBConnection._DATE_FORMAT)] = y_value
+            stmt = stmt_template % (stat_tbl_name, last_datetime)
+            cursor.execute(stmt)
 
-        #print this_stat
-        return this_stat
+            for res in cursor:
+                series = res[1]
+                y_value = res[2]
+                this_date = res[3]
+                if series not in this_stat:
+                    this_stat[series] = {}
+
+                this_stat[series][this_date.strftime(DBConnection._DATE_FORMAT)] = y_value
+
+            stats[stat_id] = this_stat
+
+        #print stats
+        return stats
