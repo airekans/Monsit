@@ -150,6 +150,97 @@ def get_swap_memory_stat(_):
             'series': [('swap', int(swap_info.percent))]}
 
 
+_new_disk_stat = [None]
+
+
+def get_disk_write_stat(last_disk_io_write_stat):
+    if _new_disk_stat[0] is None:
+        disk_io_counters = disk.get_io_counters()
+        disk_basic_infos = disk.get_partitions()
+        _new_disk_stat[0] = (disk_io_counters, disk_basic_infos)
+    else:
+        disk_io_counters, disk_basic_infos = _new_disk_stat[0]
+        _new_disk_stat[0] = None
+
+    stat_series = []
+    stat_result = {'data_type': 'int',
+                   'series': stat_series,
+                   'memorized_data': disk_io_counters}
+
+    if last_disk_io_write_stat is not None:
+        for info in disk_basic_infos:
+            dev_name = info.device
+            dev_name = dev_name.split('/')[-1]
+            if dev_name not in disk_io_counters:
+                continue
+
+            last_disk_stat = last_disk_io_write_stat[dev_name]
+            last_write = last_disk_stat.write_bytes
+
+            cur_disk_stat = disk_io_counters[dev_name]
+            cur_write = cur_disk_stat.write_bytes
+
+            write_rate = (cur_write - last_write) / _COLLECT_INTERVAL / 1024  # KB
+            if write_rate < 0:
+                write_rate = 0
+
+            stat_series.append((dev_name, write_rate))
+    else:  # the first time should set all to 0
+        for info in disk_basic_infos:
+            dev_name = info.device
+            dev_name = dev_name.split('/')[-1]
+            if dev_name not in disk_io_counters:
+                continue
+
+            stat_series.append((dev_name, 0))
+
+    return stat_result
+
+
+def get_disk_read_stat(last_disk_io_read_stat):
+    if _new_disk_stat[0] is None:
+        disk_io_counters = disk.get_io_counters()
+        disk_basic_infos = disk.get_partitions()
+        _new_disk_stat[0] = (disk_io_counters, disk_basic_infos)
+    else:
+        disk_io_counters, disk_basic_infos = _new_disk_stat[0]
+        _new_disk_stat[0] = None
+
+    stat_series = []
+    stat_result = {'data_type': 'int',
+                   'series': stat_series,
+                   'memorized_data': disk_io_counters}
+
+    if last_disk_io_read_stat is not None:
+        for info in disk_basic_infos:
+            dev_name = info.device
+            dev_name = dev_name.split('/')[-1]
+            if dev_name not in disk_io_counters:
+                continue
+
+            last_disk_stat = last_disk_io_read_stat[dev_name]
+            last_read = last_disk_stat.read_bytes
+
+            cur_disk_stat = disk_io_counters[dev_name]
+            cur_read = cur_disk_stat.read_bytes
+
+            read_rate = (cur_read - last_read) / _COLLECT_INTERVAL / 1024  # KB
+            if read_rate < 0:
+                read_rate = 0
+
+            stat_series.append((dev_name, read_rate))
+    else:  # the first time should set all to 0
+        for info in disk_basic_infos:
+            dev_name = info.device
+            dev_name = dev_name.split('/')[-1]
+            if dev_name not in disk_io_counters:
+                continue
+
+            stat_series.append((dev_name, 0))
+
+    return stat_result
+
+
 def collect_machine_info():
     global _last_stat
 
@@ -183,82 +274,6 @@ def collect_machine_info():
             else:
                 y_val.reserve_value = str(y_value)
 
-    # get disk io stat
-    disk_io_counters = disk.get_io_counters()
-    disk_basic_infos = disk.get_partitions()
-
-    disk_io_write_stat = machine_info.stat.add()
-    disk_io_write_stat.id = _DISK_WRITE_KB_ID
-    if 'disk_io_write' in _last_stat:
-        last_disk_io_write_stat = _last_stat['disk_io_write']
-        for info in disk_basic_infos:
-            dev_name = info.device
-            dev_name = dev_name.split('/')[-1]
-            if dev_name not in disk_io_counters:
-                continue
-
-            last_disk_stat = last_disk_io_write_stat[dev_name]
-            last_write = last_disk_stat.write_bytes
-
-            cur_disk_stat = disk_io_counters[dev_name]
-            cur_write = cur_disk_stat.write_bytes
-
-            write_rate = (cur_write - last_write) / _COLLECT_INTERVAL / 1024  # KB
-            if write_rate < 0:
-                write_rate = 0
-
-            y_value = disk_io_write_stat.y_axis_value.add()
-            y_value.name = dev_name
-            y_value.num_value = write_rate
-    else:  # the first time should set all to 0
-        for info in disk_basic_infos:
-            dev_name = info.device
-            dev_name = dev_name.split('/')[-1]
-            if dev_name not in disk_io_counters:
-                continue
-
-            y_value = disk_io_write_stat.y_axis_value.add()
-            y_value.name = dev_name
-            y_value.num_value = 0
-
-    _last_stat['disk_io_write'] = disk_io_counters
-
-    disk_io_read_stat = machine_info.stat.add()
-    disk_io_read_stat.id = _DISK_READ_KB_ID
-    if 'disk_io_read' in _last_stat:
-        last_disk_io_read_stat = _last_stat['disk_io_read']
-        for info in disk_basic_infos:
-            dev_name = info.device
-            dev_name = dev_name.split('/')[-1]
-            if dev_name not in disk_io_counters:
-                continue
-
-            last_disk_stat = last_disk_io_read_stat[dev_name]
-            last_read = last_disk_stat.read_bytes
-
-            cur_disk_stat = disk_io_counters[dev_name]
-            cur_read = cur_disk_stat.read_bytes
-
-            read_rate = (cur_read - last_read) / _COLLECT_INTERVAL / 1024  # KB
-            if read_rate < 0:
-                read_rate = 0
-
-            y_value = disk_io_read_stat.y_axis_value.add()
-            y_value.name = dev_name
-            y_value.num_value = read_rate
-    else:  # the first time should set all to 0
-        for info in disk_basic_infos:
-            dev_name = info.device
-            dev_name = dev_name.split('/')[-1]
-            if dev_name not in disk_io_counters:
-                continue
-
-            y_value = disk_io_read_stat.y_axis_value.add()
-            y_value.name = dev_name
-            y_value.num_value = 0
-
-    _last_stat['disk_io_read'] = disk_io_counters
-
     machine_info.datetime = int(time.time())
 
     return machine_info
@@ -270,6 +285,8 @@ def collect_thread(master_addr, interval):
     register_stat_func(_NETWORK_SEND_ID, get_net_send_stat)
     register_stat_func(_VIRTUAL_MEM_ID, get_virtual_memory_stat)
     register_stat_func(_SWAP_MEM_ID, get_swap_memory_stat)
+    register_stat_func(_DISK_WRITE_KB_ID, get_disk_write_stat)
+    register_stat_func(_DISK_READ_KB_ID, get_disk_read_stat)
 
     rpc_client = RpcClient()
     tcp_channel = rpc_client.get_tcp_channel(master_addr)
