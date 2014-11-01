@@ -123,6 +123,33 @@ def get_net_send_stat(last_net_send_stats):
     return stat_result
 
 
+_new_memory_stat = [None]
+
+
+def get_virtual_memory_stat(_):
+    if _new_memory_stat[0] is None:
+        vmem_info, swap_info = memory.get_mem_stat()
+        _new_memory_stat[0] = (vmem_info, swap_info)
+    else:
+        vmem_info, _ = _new_memory_stat[0]
+        _new_memory_stat[0] = None
+
+    return {'data_type': 'int',
+            'series': [('vmem', int(vmem_info.percent))]}
+
+
+def get_swap_memory_stat(_):
+    if _new_memory_stat[0] is None:
+        vmem_info, swap_info = memory.get_mem_stat()
+        _new_memory_stat[0] = (vmem_info, swap_info)
+    else:
+        _, swap_info = _new_memory_stat[0]
+        _new_memory_stat[0] = None
+
+    return {'data_type': 'int',
+            'series': [('swap', int(swap_info.percent))]}
+
+
 def collect_machine_info():
     global _last_stat
 
@@ -155,20 +182,6 @@ def collect_machine_info():
                 y_val.str_value = y_value
             else:
                 y_val.reserve_value = str(y_value)
-
-    # get memory stats
-    vmem_info, swap_info = memory.get_mem_stat()
-    vmem_stat = machine_info.stat.add()
-    vmem_stat.id = _VIRTUAL_MEM_ID
-    y_value = vmem_stat.y_axis_value.add()
-    y_value.name = 'vmem'
-    y_value.num_value = int(vmem_info.percent)
-
-    swap_stat = machine_info.stat.add()
-    swap_stat.id = _SWAP_MEM_ID
-    y_value = swap_stat.y_axis_value.add()
-    y_value.name = 'swap'
-    y_value.num_value = int(swap_info.percent)
 
     # get disk io stat
     disk_io_counters = disk.get_io_counters()
@@ -255,6 +268,8 @@ def collect_thread(master_addr, interval):
     register_stat_func(_CPU_ID, get_cpu_stat)
     register_stat_func(_NETWORK_RECV_ID, get_net_recv_stat)
     register_stat_func(_NETWORK_SEND_ID, get_net_send_stat)
+    register_stat_func(_VIRTUAL_MEM_ID, get_virtual_memory_stat)
+    register_stat_func(_SWAP_MEM_ID, get_swap_memory_stat)
 
     rpc_client = RpcClient()
     tcp_channel = rpc_client.get_tcp_channel(master_addr)
