@@ -66,6 +66,63 @@ def get_cpu_stat(last_cpu_stats):
     return stat_result
 
 
+_new_net_stats = [None]
+
+
+def get_net_recv_stat(last_net_recv_stats):
+    if _new_net_stats[0] is None:
+        net_stats = net.get_netdevs()
+        _new_net_stats[0] = net_stats
+    else:
+        net_stats = _new_net_stats[0]
+        _new_net_stats[0] = None
+
+    stat_series = []
+    stat_result = {'data_type': 'int',
+                   'series': stat_series,
+                   'memorized_data': net_stats}
+
+    if last_net_recv_stats is not None:
+        for dev_name, dev_info in net_stats.iteritems():
+            last_recv_bytes = last_net_recv_stats[dev_name].recv_byte
+            cur_recv_bytes = dev_info.recv_byte
+            recv_rate = ((cur_recv_bytes - last_recv_bytes) /
+                         _COLLECT_INTERVAL / 1024)  # MB
+            stat_series.append((dev_name, recv_rate))
+    else:  # the first time should set all to 0
+        for dev_name, dev_info in net_stats.iteritems():
+            stat_series.append((dev_name, 0))
+
+    return stat_result
+
+
+def get_net_send_stat(last_net_send_stats):
+    if _new_net_stats[0] is None:
+        net_stats = net.get_netdevs()
+        _new_net_stats[0] = net_stats
+    else:
+        net_stats = _new_net_stats[0]
+        _new_net_stats[0] = None
+
+    stat_series = []
+    stat_result = {'data_type': 'int',
+                   'series': stat_series,
+                   'memorized_data': net_stats}
+
+    if last_net_send_stats is not None:
+        for dev_name, dev_info in net_stats.iteritems():
+            last_send_bytes = last_net_send_stats[dev_name].send_byte
+            cur_send_bytes = dev_info.send_byte
+            send_rate = ((cur_send_bytes - last_send_bytes) /
+                         _COLLECT_INTERVAL / 1024)  # MB
+            stat_series.append((dev_name, send_rate))
+    else:  # the first time should set all to 0
+        for dev_name, dev_info in net_stats.iteritems():
+            stat_series.append((dev_name, 0))
+
+    return stat_result
+
+
 def collect_machine_info():
     global _last_stat
 
@@ -75,6 +132,8 @@ def collect_machine_info():
         result = func(_last_stat.get(stat_id))
         type_func = _SUPPORT_DATA_TYPE[result['data_type']]
         stat_series = result['series']
+        if 'memorized_data' in result:
+            _last_stat[stat_id] = result['memorized_data']
 
         stat = machine_info.stat.add()
         stat.id = stat_id
@@ -96,74 +155,6 @@ def collect_machine_info():
                 y_val.str_value = y_value
             else:
                 y_val.reserve_value = str(y_value)
-
-
-
-
-    # get cpu stats
-    cpu_stats = cpu.get_cpu_stat()
-    cpu_stat = machine_info.stat.add()
-    cpu_stat.id = _CPU_ID
-    if 'cpu' in _last_stat:
-        last_cpu_stats = _last_stat['cpu']
-        for name, stat in cpu_stats.iteritems():
-            last_stat = last_cpu_stats[name]
-            cpu_usage = get_cpu_usage(stat, last_stat)
-
-            y_value = cpu_stat.y_axis_value.add()
-            y_value.name = name
-            y_value.num_value = cpu_usage
-    else:  # the first time should set all to 0
-        for name, stat in cpu_stats.iteritems():
-            y_value = cpu_stat.y_axis_value.add()
-            y_value.name = name
-            y_value.num_value = 0
-
-    _last_stat['cpu'] = cpu_stats
-
-    # get network stats
-    net_stats = net.get_netdevs()
-    net_recv_stat = machine_info.stat.add()
-    net_recv_stat.id = _NETWORK_RECV_ID
-    if 'net_recv' in _last_stat:
-        last_net_recv_stats = _last_stat['net_recv']
-        for dev_name, dev_info in net_stats.iteritems():
-            last_recv_bytes = last_net_recv_stats[dev_name].recv_byte
-            cur_recv_bytes = dev_info.recv_byte
-            recv_rate = ((cur_recv_bytes - last_recv_bytes) /
-                         _COLLECT_INTERVAL / 1024)  # MB
-
-            y_value = net_recv_stat.y_axis_value.add()
-            y_value.name = dev_name
-            y_value.num_value = recv_rate
-    else:  # the first time should set all to 0
-        for dev_name, dev_info in net_stats.iteritems():
-            y_value = net_recv_stat.y_axis_value.add()
-            y_value.name = dev_name
-            y_value.num_value = 0
-
-    _last_stat['net_recv'] = net_stats
-
-    net_send_stat = machine_info.stat.add()
-    net_send_stat.id = _NETWORK_SEND_ID
-    if 'net_send' in _last_stat:
-        last_net_send_stats = _last_stat['net_send']
-        for dev_name, dev_info in net_stats.iteritems():
-            last_send_bytes = last_net_send_stats[dev_name].send_byte
-            cur_send_bytes = dev_info.send_byte
-            send_rate = ((cur_send_bytes - last_send_bytes) /
-                         _COLLECT_INTERVAL / 1024)  # MB
-
-            y_value = net_send_stat.y_axis_value.add()
-            y_value.name = dev_name
-            y_value.num_value = send_rate
-    else:  # the first time should set all to 0
-        for dev_name, dev_info in net_stats.iteritems():
-            y_value = net_send_stat.y_axis_value.add()
-            y_value.name = dev_name
-            y_value.num_value = 0
-
-    _last_stat['net_send'] = net_stats
 
     # get memory stats
     vmem_info, swap_info = memory.get_mem_stat()
@@ -261,6 +252,10 @@ def collect_machine_info():
 
 
 def collect_thread(master_addr, interval):
+    register_stat_func(_CPU_ID, get_cpu_stat)
+    register_stat_func(_NETWORK_RECV_ID, get_net_recv_stat)
+    register_stat_func(_NETWORK_SEND_ID, get_net_send_stat)
+
     rpc_client = RpcClient()
     tcp_channel = rpc_client.get_tcp_channel(master_addr)
     stub = monsit_pb2.MonsitService_Stub(tcp_channel)
