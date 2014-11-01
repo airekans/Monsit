@@ -35,11 +35,70 @@ _SWAP_MEM_ID = 5
 _DISK_WRITE_KB_ID = 6
 _DISK_READ_KB_ID = 7
 
+_SUPPORT_DATA_TYPE = {'int': int,
+                      'double': float,
+                      'string': str}
 
-def collect_machine_info(is_first_time):
+_register_stat_funcs = {}
+
+
+def register_stat_func(stat_id, func):
+    _register_stat_funcs[stat_id] = func
+
+
+def get_cpu_stat(last_cpu_stats):
+    cpu_stats = cpu.get_cpu_stat()
+
+    stat_series = []
+    stat_result = {'data_type': 'int',
+                   'series': stat_series,
+                   'memorized_data': cpu_stats}
+
+    if last_cpu_stats is not None:
+        for name, stat in cpu_stats.iteritems():
+            last_stat = last_cpu_stats[name]
+            cpu_usage = get_cpu_usage(stat, last_stat)
+            stat_series.append((name, cpu_usage))
+    else:  # the first time should set all to 0
+        for name, stat in cpu_stats.iteritems():
+            stat_series.append((name, 0))
+
+    return stat_result
+
+
+def collect_machine_info():
     global _last_stat
 
     machine_info = monsit_pb2.ReportRequest()
+
+    for stat_id, func in _register_stat_funcs.iteritems():
+        result = func(_last_stat.get(stat_id))
+        type_func = _SUPPORT_DATA_TYPE[result['data_type']]
+        stat_series = result['series']
+
+        stat = machine_info.stat.add()
+        stat.id = stat_id
+
+        for name, y_value in stat_series:
+            if not isinstance(y_value, type_func):
+                try:
+                    y_value = type_func(y_value)
+                except ValueError:
+                    continue
+
+            y_val = stat.y_axis_value.add()
+            y_val.name = name
+            if type_func is int:
+                y_val.num_value = y_value
+            elif type_func is float:
+                y_val.double_value = y_value
+            elif type_func is str:
+                y_val.str_value = y_value
+            else:
+                y_val.reserve_value = str(y_value)
+
+
+
 
     # get cpu stats
     cpu_stats = cpu.get_cpu_stat()
@@ -219,11 +278,9 @@ def collect_thread(master_addr, interval):
 
     host_id = rsp.host_id
 
-    is_first_time = True
     while True:
-        req = collect_machine_info(is_first_time)
+        req = collect_machine_info()
         req.host_id = host_id
-        is_first_time = False
         controller = RpcController()
         rsp = stub.Report(controller, req)
         print rsp
