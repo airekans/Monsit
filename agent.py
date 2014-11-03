@@ -6,6 +6,8 @@ import sys
 import gevent
 from monsit import cpu, net, memory, disk
 from monsit.proto import monsit_pb2
+from monsit import api
+
 from recall.client import RpcClient
 from recall.controller import RpcController
 
@@ -38,12 +40,6 @@ _DISK_READ_KB_ID = 7
 _SUPPORT_DATA_TYPE = {'int': int,
                       'double': float,
                       'string': str}
-
-_register_stat_funcs = {}
-
-
-def register_stat_func(stat_id, func):
-    _register_stat_funcs[stat_id] = func
 
 
 def get_cpu_stat(last_cpu_stats):
@@ -244,9 +240,10 @@ def get_disk_read_stat(last_disk_io_read_stat):
 def collect_machine_info():
     global _last_stat
 
+    register_stat_funcs = api.get_registered_stat_funcs()
     machine_info = monsit_pb2.ReportRequest()
 
-    for stat_id, func in _register_stat_funcs.iteritems():
+    for stat_id, func in register_stat_funcs.iteritems():
         result = func(_last_stat.get(stat_id))
         type_func = _SUPPORT_DATA_TYPE[result['data_type']]
         stat_series = result['series']
@@ -280,13 +277,13 @@ def collect_machine_info():
 
 
 def collect_thread(master_addr, interval):
-    register_stat_func(_CPU_ID, get_cpu_stat)
-    register_stat_func(_NETWORK_RECV_ID, get_net_recv_stat)
-    register_stat_func(_NETWORK_SEND_ID, get_net_send_stat)
-    register_stat_func(_VIRTUAL_MEM_ID, get_virtual_memory_stat)
-    register_stat_func(_SWAP_MEM_ID, get_swap_memory_stat)
-    register_stat_func(_DISK_WRITE_KB_ID, get_disk_write_stat)
-    register_stat_func(_DISK_READ_KB_ID, get_disk_read_stat)
+    api.register_stat_func(_CPU_ID, get_cpu_stat)
+    api.register_stat_func(_NETWORK_RECV_ID, get_net_recv_stat)
+    api.register_stat_func(_NETWORK_SEND_ID, get_net_send_stat)
+    api.register_stat_func(_VIRTUAL_MEM_ID, get_virtual_memory_stat)
+    api.register_stat_func(_SWAP_MEM_ID, get_swap_memory_stat)
+    api.register_stat_func(_DISK_WRITE_KB_ID, get_disk_write_stat)
+    api.register_stat_func(_DISK_READ_KB_ID, get_disk_read_stat)
 
     rpc_client = RpcClient()
     tcp_channel = rpc_client.get_tcp_channel(master_addr)
