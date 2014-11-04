@@ -2,6 +2,9 @@ import socket
 import time
 import optparse
 import sys
+import importlib
+import inspect
+import traceback
 
 import gevent
 from monsit import cpu, net, memory, disk
@@ -276,7 +279,7 @@ def collect_machine_info():
     return machine_info
 
 
-def collect_thread(master_addr, interval):
+def register_builtin_stat_funcs():
     api.register_stat_func(_CPU_ID, get_cpu_stat)
     api.register_stat_func(_NETWORK_RECV_ID, get_net_recv_stat)
     api.register_stat_func(_NETWORK_SEND_ID, get_net_send_stat)
@@ -285,6 +288,8 @@ def collect_thread(master_addr, interval):
     api.register_stat_func(_DISK_WRITE_KB_ID, get_disk_write_stat)
     api.register_stat_func(_DISK_READ_KB_ID, get_disk_read_stat)
 
+
+def collect_thread(master_addr, interval):
     rpc_client = RpcClient()
     tcp_channel = rpc_client.get_tcp_channel(master_addr)
     stub = monsit_pb2.MonsitService_Stub(tcp_channel)
@@ -317,9 +322,35 @@ def main():
                          help="IP of the master", default="127.0.0.1")
     optparser.add_option('--master-port', dest="master_port",
                          help="Port of the master", default='30002')
+    optparser.add_option('-u', '--user-module', dest="user_module",
+                         help="Name of the user module")
+    optparser.add_option('-e', '--user-stat-func', dest="user_stat_func",
+                         help="Name of the user stat function")
 
     opts, args = optparser.parse_args()
     master_addr = opts.master_ip + ':' + opts.master_port
+    get_user_stat_func = None
+    if opts.user_module is not None:
+        get_user_stat_func_name = 'get_stat_funcs'
+        if opts.user_stat_func is not None:
+            get_user_stat_func_name = opts.user_stat_func
+
+        try:
+            user_module = importlib.import_module(opts.user_module)
+            get_user_stat_func = user_module.__dict__.get(get_user_stat_func_name)
+            if not inspect.isfunction(get_user_stat_func):
+                get_user_stat_func = None
+        except ImportError, e:
+            print 'import user module error:', e
+
+    register_builtin_stat_funcs()
+    if get_user_stat_func is not None:
+        try:
+            for stat_id, stat_func in get_user_stat_func():
+                api.register_stat_func(stat_id, stat_func)
+        except:
+            traceback.print_exc()
+            sys.exit(1)
 
     job = gevent.spawn(collect_thread, master_addr, _COLLECT_INTERVAL)
 
