@@ -13,8 +13,8 @@ class TableNames(object):
     hosts_tbl = 'hosts'
 
     @staticmethod
-    def get_host_info_table_name(host_id):
-        return 'hostinfo_%d' % host_id
+    def get_host_stat_info_table_name(host_id):
+        return 'host_stat_info_%d' % host_id
 
     @staticmethod
     def get_stat_table_name(host_id, field_id):
@@ -119,7 +119,7 @@ class DBConnection(object):
         select_stmt = (
             "SELECT field_id FROM %s"
             " WHERE stat_name='%s'"
-        ) % (TableNames.get_host_info_table_name(host_id), stat_name)
+        ) % (TableNames.get_host_stat_info_table_name(host_id), stat_name)
         cursor.execute(select_stmt)
 
         field_id = None
@@ -155,7 +155,7 @@ class DBConnection(object):
             ('disk_io_read', 'Read', ValueType.Int, 'KB')  # 7
         ]
 
-        hostinfo_tbl_name = TableNames.get_host_info_table_name(host_id)
+        hostinfo_tbl_name = TableNames.get_host_stat_info_table_name(host_id)
         insert_stmt_template = (
             "INSERT INTO %s SET"
             " stat_name='%s',"
@@ -206,7 +206,7 @@ class DBConnection(object):
             '  `y_unit` varchar(15) NOT NULL,'
             '  PRIMARY KEY (`field_id`)'
             ') ENGINE=InnoDB'
-        ) % TableNames.get_host_info_table_name(host_id)
+        ) % TableNames.get_host_stat_info_table_name(host_id)
         cursor.execute(create_host_tbl_stmt)
 
         self.insert_builtin_fields(cursor, host_id)
@@ -216,7 +216,7 @@ class DBConnection(object):
 
     def insert_stat(self, stat_req, report_time):
         host_id = stat_req.host_id
-        host_tbl_name = TableNames.get_host_info_table_name(host_id)
+        host_tbl_name = TableNames.get_host_stat_info_table_name(host_id)
 
         cursor = self.__cnx.cursor()
         insert_stmt_template = (
@@ -249,7 +249,7 @@ class DBConnection(object):
                 cursor.execute(insert_stmt)
 
     def get_stat_infos(self, cursor, host_id):
-        select_stmt = "SELECT * FROM %s" % TableNames.get_host_info_table_name(host_id)
+        select_stmt = "SELECT * FROM %s" % TableNames.get_host_stat_info_table_name(host_id)
         cursor.execute(select_stmt)
 
         infos = {}
