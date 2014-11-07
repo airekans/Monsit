@@ -20,6 +20,10 @@ class TableNames(object):
     def get_stat_table_name(host_id, field_id):
         return 'field_%d_%d' % (host_id, field_id)
 
+    @staticmethod
+    def get_host_info_table_name(host_id):
+        return 'hostinfo_%d' % host_id
+
 
 def _create_global_tables(cnx):
     cursor = cnx.cursor()
@@ -187,6 +191,24 @@ class DBConnection(object):
             )
             cursor.execute(create_stmt)
 
+    def insert_builtin_infos(self, cursor, host_id):
+        builtin_info_configs = [
+            ('host_connected', 'Connection')  # 1
+        ]
+
+        host_info_table_name = TableNames.get_host_info_table_name(host_id)
+        insert_stmt_template = (
+            "INSERT INTO %s SET"
+            " info_name='%s',"
+            " chart_name='%s'"
+        )
+
+        for config in builtin_info_configs:
+            info_name, chart_name = config
+            insert_stmt = insert_stmt_template % (
+                host_info_table_name, info_name, chart_name)
+            cursor.execute(insert_stmt)
+
     def insert_new_host(self, host_name):
         cursor = self.__cnx.cursor()
         host_insert_stmt = (
@@ -197,7 +219,7 @@ class DBConnection(object):
 
         host_id, _ = self.get_host_info(host_name)
 
-        create_host_tbl_stmt = (
+        create_host_stat_info_tbl_stmt = (
             'CREATE TABLE IF NOT EXISTS `%s` ('
             '  `field_id` int(11) NOT NULL AUTO_INCREMENT,'
             '  `stat_name` varchar(25) NOT NULL,'
@@ -207,9 +229,22 @@ class DBConnection(object):
             '  PRIMARY KEY (`field_id`)'
             ') ENGINE=InnoDB'
         ) % TableNames.get_host_stat_info_table_name(host_id)
-        cursor.execute(create_host_tbl_stmt)
+        cursor.execute(create_host_stat_info_tbl_stmt)
 
         self.insert_builtin_fields(cursor, host_id)
+
+        create_host_info_tbl_stmt = (
+            'CREATE TABLE IF NOT EXISTS `%s` ('
+            '  `info_id` int(11) NOT NULL AUTO_INCREMENT,'
+            '  `info_name` varchar(25) NOT NULL,'
+            '  `chart_name` varchar(25) NOT NULL,'
+            '  `info_data` varbinary(64),'
+            '  PRIMARY KEY (`info_id`)'
+            ') ENGINE=InnoDB'
+        ) % TableNames.get_host_info_table_name(host_id)
+        cursor.execute(create_host_info_tbl_stmt)
+
+        self.insert_builtin_infos(cursor, host_id)
 
         self.__cnx.commit()
         return self.get_host_info(host_name)
