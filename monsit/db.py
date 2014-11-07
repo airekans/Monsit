@@ -283,6 +283,21 @@ class DBConnection(object):
                 )
                 cursor.execute(insert_stmt)
 
+    def update_info(self, info_req):
+        info_tbl_name = TableNames.get_host_info_table_name(info_req.host_id)
+        update_stmt_template = (
+            "UPDATE %s SET"
+            "  info_data=0x%s"
+            "  WHERE info_id=%d"
+        )
+
+        cursor = self.__cnx.cursor()
+        for info in info_req.basic_infos:
+            update_stmt = update_stmt_template % (
+                info_tbl_name, info.info.encode('hex_codec'), info.id
+            )
+            cursor.execute(update_stmt)
+
     def get_stat_infos(self, cursor, host_id):
         select_stmt = "SELECT * FROM %s" % TableNames.get_host_stat_info_table_name(host_id)
         cursor.execute(select_stmt)

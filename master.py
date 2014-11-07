@@ -5,6 +5,7 @@ from monsit import db
 from recall.server import RpcServer
 from monsit.proto import monsit_pb2
 import datetime
+import json
 
 
 class MonsitServiceImpl(monsit_pb2.MonsitService):
@@ -49,10 +50,17 @@ class MonsitServiceImpl(monsit_pb2.MonsitService):
 
         print request
 
+        # insert the connection time to the info
+        connection_info = {'connected': True, 'datetime': request.datetime}
+        basic_info = request.basic_infos.add()
+        basic_info.id = 1
+        basic_info.info = json.dumps(connection_info, separators=(',', ':'))
+
         with db.DBConnection() as cnx:
             report_time = datetime.datetime.fromtimestamp(request.datetime)
             report_time = report_time.strftime("%Y-%m-%d %H:%M:%S")
             cnx.insert_stat(request, report_time)
+            cnx.update_info(request)
             cnx.commit()
 
         rsp = monsit_pb2.ReportResponse(return_code=0, msg='SUCCESS')
