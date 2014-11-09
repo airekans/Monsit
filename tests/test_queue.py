@@ -29,10 +29,44 @@ class PriorityQueueTest(unittest.TestCase):
 
         self.assert_heapify(self.array, 0)
 
+    def test_len(self):
+        self.assertEqual(len(self.array), len(self.queue))
+
+    def test_reset(self):
+        self.assertGreater(self.queue.size(), 0)
+        self.queue.reset()
+        self.assertEqual(0, self.queue.size())
+
+        new_array = [3, 2, 1, 4]
+        self.queue.reset(new_array)
+        self.assertEqual(4, self.queue.size())
+        self.assertEqual(len(new_array), self.queue.size())
+        self.assert_heapify(new_array, 0)
+
+    def test_is_empty(self):
+        self.assertGreater(len(self.queue), 0)
+        self.assertFalse(self.queue.is_empty())
+
+        self.queue.reset([])
+        self.assertEqual(0, self.queue.size())
+        self.assertTrue(self.queue.is_empty())
+
+    def test_push(self):
+        old_queue_size = self.queue.size()
+        self.queue.push(2)
+        self.assertEqual(old_queue_size + 1, self.queue.size())
+
+        self.assert_heapify(self.array, 0)
+
     def test_pop(self):
         old_queue_size = self.queue.size()
         self.assertEqual(1, self.queue.pop())
         self.assertEqual(old_queue_size - 1, self.queue.size())
+
+    def test_get(self):
+        for index in xrange(len(self.queue)):
+            self.assertEqual(self.array[index], self.queue.get(index))
+            self.assertEqual(self.array[index], self.queue[index])
 
     def test_increase_key(self):
         key_index = self.queue.find(5)

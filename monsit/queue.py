@@ -31,8 +31,14 @@ class PriorityQueue(object):
     def size(self):
         return len(self.__array)
 
+    def __len__(self):
+        return self.size()
+
     def get(self, index):
         return self.__array[index]
+
+    def __getitem__(self, item):
+        return self.get(item)
 
     def get_top(self):
         return self.__array[0]
