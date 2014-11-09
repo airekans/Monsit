@@ -1,11 +1,27 @@
 from gevent import monkey
 monkey.patch_all()
 
+import gevent
+
 from monsit import db
 from recall.server import RpcServer
 from monsit.proto import monsit_pb2
+from monsit.queue import PriorityQueue
+
 import datetime
+import time
 import json
+
+
+_workers = []
+
+
+def spawn(func, *args, **kwargs):
+    _workers.append(gevent.spawn(func, *args, **kwargs))
+
+
+def kill_all_workers():
+    gevent.killall(_workers)
 
 
 class MonsitServiceImpl(monsit_pb2.MonsitService):
@@ -20,6 +36,9 @@ class MonsitServiceImpl(monsit_pb2.MonsitService):
 
             self.__registered_host_names = registered_hosts
             self.__registered_host_ids = registered_host_ids
+            self.__host_time_info = {}
+            self.__timeout_queue = PriorityQueue()
+            spawn(self._timeout_loop)
 
     def Register(self, rpc_controller, request, done):
         try:
@@ -32,6 +51,8 @@ class MonsitServiceImpl(monsit_pb2.MonsitService):
                 self.__registered_host_ids[host_id] = [request.host_name, True]
 
         print request
+
+        self.__host_time_info[host_id] = (30, None)  # TODO: change this
 
         rsp = monsit_pb2.RegisterResponse(return_code=0, msg='SUCCESS',
                                           host_id=host_id)
@@ -56,6 +77,21 @@ class MonsitServiceImpl(monsit_pb2.MonsitService):
         basic_info.id = 1
         basic_info.info = json.dumps(connection_info, separators=(',', ':'))
 
+        # record the report time, and put it to the timeout queue
+        report_interval, last_update_time = self.__host_time_info.get(request.host_id)
+        timeout_period = (report_interval * 3 + 1) / 2
+        new_deadline = request.datetime + timeout_period
+        if last_update_time is None:
+            self.__timeout_queue.push((new_deadline, request.host_id))
+        else:
+            last_deadline = last_update_time + timeout_period
+            time_index = self.__timeout_queue.find((last_deadline, request.host_id))
+            if time_index >= 0:
+                self.__timeout_queue.increase_key(time_index, (new_deadline, request.host_id))
+            else:
+                self.__timeout_queue.push((new_deadline, request.host_id))
+        self.__host_time_info[request.host_id] = (report_interval, request.datetime)
+
         with db.DBConnection() as cnx:
             report_time = datetime.datetime.fromtimestamp(request.datetime)
             report_time = report_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -65,6 +101,37 @@ class MonsitServiceImpl(monsit_pb2.MonsitService):
 
         rsp = monsit_pb2.ReportResponse(return_code=0, msg='SUCCESS')
         return rsp
+
+    def _timeout_loop(self):
+        while True:
+            gevent.sleep(1)
+            if not self.__timeout_queue.is_empty():
+                now = int(time.time())
+                conn = None
+                while not self.__timeout_queue.is_empty():
+                    deadline, host_id = self.__timeout_queue.get_top()
+                    if now < deadline:
+                        break
+                    elif conn is None:
+                        conn = db.DBConnection()
+
+                    print host_id, ' has been timeout.'
+
+                    self.__timeout_queue.pop()
+                    # set the host to not connected state
+                    report_interval, last_update_time = self.__host_time_info[host_id]
+                    self.__host_time_info[host_id] = (report_interval, None)
+                    connection_info = {'connected': False, 'datetime': last_update_time}
+                    req = monsit_pb2.ReportRequest()
+                    req.host_id = host_id
+                    basic_info = req.basic_infos.add()
+                    basic_info.id = 1
+                    basic_info.info = json.dumps(connection_info, separators=(',', ':'))
+                    conn.update_info(req)
+
+                if conn is not None:
+                    conn.commit()
+                    conn.close()
 
 
 if __name__ == '__main__':
@@ -77,3 +144,4 @@ if __name__ == '__main__':
         rpc_server.run(print_stat_interval=60)
     except KeyboardInterrupt:
         print 'monsit got SIGINT, exit.'
+        kill_all_workers()

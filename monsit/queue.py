@@ -5,7 +5,7 @@ class PriorityQueue(object):
     """ This is the min queue by default
     """
 
-    def __init__(self, initial_array):
+    def __init__(self, initial_array=[]):
         self.__array = initial_array
         heapq.heapify(self.__array)  # make the heap
 
@@ -62,7 +62,7 @@ class PriorityQueue(object):
 
     def decrease_key(self, index, elem):
         if elem >= self.__array[index]:
-            return
+            return -1
 
         self.__array[index] = elem
         parent_i = PriorityQueue.parent(index)
@@ -70,9 +70,11 @@ class PriorityQueue(object):
             self._swap(index, parent_i)
             index, parent_i = parent_i, PriorityQueue.parent(parent_i)
 
+        return index
+
     def increase_key(self, index, elem):
         if elem <= self.__array[index]:
-            return
+            return -1
 
         self.__array[index] = elem
         queue_size = self.size()
@@ -94,4 +96,6 @@ class PriorityQueue(object):
             index = min_i
             left_i = PriorityQueue.left_child(index)
             right_i = PriorityQueue.right_child(index)
+
+        return index
 

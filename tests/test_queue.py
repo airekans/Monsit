@@ -70,7 +70,7 @@ class PriorityQueueTest(unittest.TestCase):
 
     def test_increase_key(self):
         key_index = self.queue.find(5)
-        self.queue.increase_key(key_index, 9)
+        self.assertGreaterEqual(self.queue.increase_key(key_index, 9), key_index)
 
         new_index = self.queue.find(9)
         self.assertNotEqual(-1, new_index)
@@ -79,7 +79,7 @@ class PriorityQueueTest(unittest.TestCase):
 
     def test_decrease_key(self):
         key_index = self.queue.find(5)
-        self.queue.decrease_key(key_index, 0)
+        self.assertLessEqual(self.queue.decrease_key(key_index, 0), key_index)
 
         new_index = self.queue.find(0)
         self.assertNotEqual(-1, new_index)
