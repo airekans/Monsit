@@ -1,19 +1,30 @@
 from flask import Flask, render_template, request, abort, jsonify
 from monsit import db
 import datetime
+import json
 
 app = Flask(__name__)
 
 
 class HostInfo(object):
-    def __init__(self, host_id, name):
+    def __init__(self, host_id, name, is_connected, last_update_time):
         self.id = host_id
         self.name = name
+        self.is_connected = is_connected
+        self.last_update_time = last_update_time
 
 @app.route("/")
 def index():
     with db.DBConnection() as cnx:
-        host_infos = [HostInfo(host[0], host[1]) for host in cnx.get_all_hosts()]
+        host_infos = []
+        for host in cnx.get_all_hosts():
+            host_id = host[0]
+            host_name = host[1]
+            infos = cnx.get_host_infos(host_id, [1])
+            info_json = json.loads(infos[1])
+            host_infos.append(
+                HostInfo(host_id, host_name, info_json['connected'],
+                         datetime.datetime.fromtimestamp(info_json['datetime'])))
 
     return render_template('index.html', hosts=host_infos)
 
