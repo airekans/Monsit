@@ -391,3 +391,20 @@ class DBConnection(object):
 
         #print stats
         return stats
+
+    def get_host_infos(self, host_id, info_ids):
+        cursor = self.__cnx.cursor()
+        stmt_template = ("SELECT * FROM %s"
+                         " WHERE %s")
+        table_name = TableNames.get_host_info_table_name(host_id)
+        condition_clause = ' OR '.join(['info_id=%d' % _i for _i in info_ids])
+        stmt = stmt_template % (table_name, condition_clause)
+        cursor.execute(stmt)
+
+        infos = {}
+        for res in cursor:
+            info_id, info_data = res[0], res[3]
+            infos[int(info_id)] = info_data
+
+        return infos
+

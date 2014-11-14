@@ -32,16 +32,55 @@
     <tr>
       <th>#</th>
       <th>hostname</th>
+      <th>is connected</th>
+      <th>last update time</th>
     </tr>
   </thead>
   <tbody>
   {% for host in hosts %}
     <tr>
-      <td>{{ host.id }}</td>
+      <td class="host_id" id="host_{{ host.id }}">{{ host.id }}</td>
       <td><a href="hostinfo?id={{ host.id }}&name={{ host.name }}">{{ host.name }}</a></td>
+      <td id="host_connected_{{ host.id }}">N/A</td>
+      <td id="host_update_time_{{ host.id }}">N/A</td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
+{% endblock %}
+
+{% block body_js %}
+{{ super() }}
+<script>
+$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+var host_connected_info_id = 1;
+var host_ids = [];
+$(".host_id").each(function(idx) {
+    var a = $(this).text();
+    host_ids.push(a);
+});
+
+var host_id_length = host_ids.length;
+for (var i = 0; i < host_id_length; ++i) {
+    var host_id = host_ids[i];
+    (function(_host_id) {
+        var args = {id: _host_id, info_ids: [host_connected_info_id]};
+        $.getJSON($SCRIPT_ROOT + '/_get_host_info', args, function(data) {
+            if (data.return_code == 0) {
+                var infos = data.infos;
+                for (info_id in infos) {
+                     if (info_id == host_connected_info_id) {
+                         var info_data = JSON.parse(infos[info_id]);
+                         $("#host_connected_" + _host_id).text(info_data.connected);
+                         $("#host_update_time_" + _host_id).text(info_data.datetime);
+                         break;
+                     }
+                }
+            }
+        });
+    })(host_id);
+}
+
+</script>
 {% endblock %}

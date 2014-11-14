@@ -68,7 +68,7 @@ $(function() {
                             latest_time: auto_refresh_stat_ids.map(function(e) {
                                 return time_records[e];
                             })};
-                $.getJSON($SCRIPT_ROOT + '/_get_latest_info', args, function(data) {
+                $.getJSON($SCRIPT_ROOT + '/_get_latest_stat', args, function(data) {
                     if (data.return_code == 0) {
                         var stat = data.stats;
                         for (var stat_id in stat) {
@@ -134,7 +134,7 @@ $(function() {
         charts[chart_id] = tmp_chart;
     }
 
-    $.getJSON($SCRIPT_ROOT + '/_get_hostinfo', {stat_ids: stat_ids, host_id: host_id},
+    $.getJSON($SCRIPT_ROOT + '/_get_host_stat', {stat_ids: stat_ids, host_id: host_id},
         function(data) {
             for (var chart_name in chart_data)
             {

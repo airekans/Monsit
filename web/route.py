@@ -31,8 +31,8 @@ def hostinfo():
 _DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
-@app.route('/_get_hostinfo', methods=['GET'])
-def ajax_hostinfo():
+@app.route('/_get_host_stat', methods=['GET'])
+def ajax_hoststat():
     stat_ids = request.args.getlist('stat_ids[]', type=int)
     host_id = request.args.get('host_id', 0, type=int)
 
@@ -42,8 +42,8 @@ def ajax_hostinfo():
     return jsonify(return_code=0, stats=host_stats)
 
 
-@app.route('/_get_latest_info', methods=['GET'])
-def ajax_latest_info():
+@app.route('/_get_latest_stat', methods=['GET'])
+def ajax_latest_stat():
     stat_ids = request.args.getlist('stat_ids[]', type=int)
     host_id = request.args.get('id', 0, type=int)
     last_times = request.args.getlist('latest_time[]')
@@ -60,6 +60,24 @@ def ajax_latest_info():
         return jsonify(return_code=1)
 
     return jsonify(return_code=0, stats=latest_stats)
+
+
+@app.route('/_get_host_info', methods=['GET'])
+def ajax_host_info():
+    info_ids = request.args.getlist('info_ids[]', type=int)
+    host_id = request.args.get('id', 0, type=int)
+    print 'host_id', host_id
+
+    with db.DBConnection() as cnx:
+        try:
+            host_infos = cnx.get_host_infos(host_id, info_ids)
+            print host_infos
+            return jsonify(return_code=0, infos=host_infos)
+        except:
+            print 'db error'
+            import traceback
+            traceback.print_exc()
+            return jsonify(return_code=1)
 
 
 if __name__ == "__main__":
