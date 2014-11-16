@@ -1,5 +1,7 @@
 import datetime
 import mysql.connector
+import struct
+import json
 
 
 _DB_CONFIG = {'host': '127.0.0.1',
@@ -23,6 +25,10 @@ class TableNames(object):
     @staticmethod
     def get_host_info_table_name(host_id):
         return 'hostinfo_%d' % host_id
+
+    @staticmethod
+    def get_host_alarm_table_name(host_id):
+        return 'host_alarm_%d' % host_id
 
 
 def _create_global_tables(cnx):
@@ -246,6 +252,22 @@ class DBConnection(object):
 
         self.insert_builtin_infos(cursor, host_id)
 
+        create_host_alarm_tbl_stmt = (
+            "CREATE TABLE IF NOT EXISTS `%s` ("
+            "  `alarm_id` int(11) NOT NULL AUTO_INCREMENT,"
+            "  `alarm_name` varchar(25) NOT NULL,"
+            "  `type` ENUM('info_alarm', 'stat_alarm') NOT NULL,"
+            "  `stat_id` int(11),"
+            "  `info_id` int(11),"
+            "  `threshold_type` ENUM('int', 'double', 'string', 'json', 'func') NOT NULL,"
+            "  `threshold` varbinary(64) NOT NULL,"
+            "  `message` varchar(256),"
+            "  `emails` varchar(256),"
+            "  PRIMARY KEY (`alarm_id`)"
+            ") ENGINE=InnoDB"
+        ) % TableNames.get_host_alarm_table_name(host_id)
+        cursor.execute(create_host_alarm_tbl_stmt)
+
         self.__cnx.commit()
         return self.get_host_info(host_name)
 
@@ -297,6 +319,49 @@ class DBConnection(object):
                 info_tbl_name, info.info.encode('hex_codec'), info.id
             )
             cursor.execute(update_stmt)
+
+    def get_alarm_settings(self, host_id):
+        cursor = self.__cnx.cursor()
+        select_stmt = "SELECT * FROM %s" % TableNames.get_host_alarm_table_name(host_id)
+        cursor.execute(select_stmt)
+
+        info_alarms = {}
+        stat_alarms = {}
+        for res in cursor:
+            alarm_name = res[1]
+            alarm_type = res[2]
+            stat_or_info_id = res[3] if alarm_type == 'stat_alarm' else res[4]
+            threshold_type = res[5]
+            threshold_str = res[6].decode('hex_codec')
+            if threshold_type == "int":
+                threshold = struct.unpack('q', threshold_str)
+            elif threshold_type == "double":
+                threshold = struct.unpack('d', threshold_str)
+            elif threshold_type == "json":
+                threshold = json.loads(threshold_str)
+            elif threshold_type == "func":
+                local_env = {}
+                exec threshold_str in local_env
+                threshold = local_env.get('threshold_func')
+            else:
+                threshold = threshold_str
+
+            alarm_message = res[7]
+            alarm_emails = res[8]
+
+            alarm_setting = {
+                'alarm_name': alarm_name,
+                'threshold_type': threshold_type,
+                'threshold': threshold,
+                'message': alarm_message,
+                'emails': alarm_emails
+            }
+            if alarm_type == 'stat_alarm':
+                stat_alarms[stat_or_info_id] = alarm_setting
+            else:
+                info_alarms[stat_or_info_id] = alarm_setting
+
+        return stat_alarms, info_alarms
 
     def get_stat_infos(self, cursor, host_id):
         select_stmt = "SELECT * FROM %s" % TableNames.get_host_stat_info_table_name(host_id)

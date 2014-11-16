@@ -24,6 +24,34 @@ def kill_all_workers():
     gevent.killall(_workers)
 
 
+def send_alarm_email(alarm_setting):
+    pass
+
+
+def check_stat_alarms(stats, alarms):
+    for stat in stats.stat:
+        stat_id = stat.id
+        alarm_setting = alarms[stat_id]
+        threshold_type = alarm_setting['threshold_type']
+        if threshold_type == 'int':
+            cmp_func = lambda x: x.num_value >= alarm_setting['threshold']
+        elif threshold_type == 'double':
+            cmp_func = lambda x: x.double_value >= alarm_setting['threshold']
+        elif threshold_type == 'string':
+            cmp_func = lambda x: x.str_value != alarm_setting['threshold']
+        elif threshold_type == 'json':
+            cmp_func = lambda x: x.reserve_value != alarm_setting['threshold']
+        else:
+            cmp_func = alarm_setting['threshold']
+
+        for y_value in stat.y_axis_value:
+            if cmp_func(y_value):
+                send_alarm_email(alarm_setting)
+
+def check_info_alarms(infos, alarms):
+    pass
+
+
 class MonsitServiceImpl(monsit_pb2.MonsitService):
 
     def __init__(self):
@@ -98,6 +126,11 @@ class MonsitServiceImpl(monsit_pb2.MonsitService):
             cnx.insert_stat(request, report_time)
             cnx.update_info(request)
             cnx.commit()
+
+            # check the whether the alarm is fired
+            stat_alarms, info_alarms = cnx.get_alarm_settings(request.host_id)
+            check_stat_alarms(request, stat_alarms)
+            check_info_alarms(request, info_alarms)
 
         rsp = monsit_pb2.ReportResponse(return_code=0, msg='SUCCESS')
         return rsp
