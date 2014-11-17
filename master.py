@@ -11,6 +11,8 @@ from monsit.queue import PriorityQueue
 import datetime
 import time
 import json
+import smtplib
+from email.mime.text import MIMEText
 
 
 _workers = []
@@ -24,8 +26,15 @@ def kill_all_workers():
     gevent.killall(_workers)
 
 
-def send_alarm_email(alarm_setting):
-    pass
+def send_alarm_email(host_id, alarm_setting):
+    from_addr = "monsit-noreply@monsit.com"
+    to_addrs = alarm_setting['emails']
+    mail_text = alarm_setting['message']
+    msg = MIMEText(mail_text)
+    msg['Subject'] = 'Host %d failed' % host_id
+    msg['From'] = from_addr
+    msg['To'] = to_addrs[0]
+    msg['CC'] = to_addrs[1:]
 
 
 def check_stat_alarms(stats, alarms):
