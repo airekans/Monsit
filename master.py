@@ -48,8 +48,22 @@ def check_stat_alarms(stats, alarms):
             if cmp_func(y_value):
                 send_alarm_email(alarm_setting)
 
+
 def check_info_alarms(infos, alarms):
-    pass
+    for info in infos.basic_infos:
+        alarm_setting = alarms[info.id]
+        threshold_type = alarm_setting['threshold_type']
+        if threshold_type == 'string':
+            cmp_func = lambda x: x != alarm_setting['threshold']
+        elif threshold_type == 'json':
+            cmp_func = lambda x: json.loads(x) != alarm_setting['threshold']
+        elif threshold_type == 'func':
+            cmp_func = alarm_setting['threshold']
+        else:
+            assert False
+
+        if cmp_func(info.info):
+            send_alarm_email(alarm_setting)
 
 
 class MonsitServiceImpl(monsit_pb2.MonsitService):
