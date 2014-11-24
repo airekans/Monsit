@@ -332,7 +332,7 @@ class DBConnection(object):
             alarm_type = res[2]
             stat_or_info_id = res[3] if alarm_type == 'stat_alarm' else res[4]
             threshold_type = res[5]
-            threshold_str = res[6].decode('hex_codec')
+            threshold_str = res[6]
             if threshold_type == "int":
                 threshold = struct.unpack('q', threshold_str)
             elif threshold_type == "double":
@@ -342,7 +342,7 @@ class DBConnection(object):
             elif threshold_type == "func":
                 local_env = {}
                 exec threshold_str in local_env
-                threshold = local_env.get('threshold_func')
+                threshold = local_env.get('threshold_func')  # TODO: this may fail
             else:
                 threshold = threshold_str
 

@@ -13,9 +13,12 @@ import time
 import json
 import smtplib
 from email.mime.text import MIMEText
+import optparse
 
 
 _workers = []
+_mail_server = "localhost"
+_from_domain = "monsit-example.com"
 
 
 def spawn(func, *args, **kwargs):
@@ -27,8 +30,9 @@ def kill_all_workers():
 
 
 def send_alarm_email(host_id, alarm_setting):
-    from_addr = "monsit-noreply@monsit.com"
+    from_addr = "monsit-noreply@" + _from_domain
     to_addrs = alarm_setting['emails']
+    to_addrs = to_addrs.split(";")
     mail_text = alarm_setting['message']
     msg = MIMEText(mail_text)
     msg['Subject'] = 'Host %d failed' % host_id
@@ -36,10 +40,22 @@ def send_alarm_email(host_id, alarm_setting):
     msg['To'] = to_addrs[0]
     msg['CC'] = to_addrs[1:]
 
+    server = smtplib.SMTP(_mail_server)
+    # server.set_debuglevel(True)
+    try:
+        server.sendmail(from_addr, to_addrs, msg.as_string())
+        print 'sent email from', from_addr, 'to', to_addrs
+    except:
+        print "Failed to send mail from %s to %s" % (from_addr, to_addrs)
+    server.quit()
+
 
 def check_stat_alarms(stats, alarms):
     for stat in stats.stat:
         stat_id = stat.id
+        if stat_id not in alarms:
+            continue
+
         alarm_setting = alarms[stat_id]
         threshold_type = alarm_setting['threshold_type']
         if threshold_type == 'int':
@@ -55,11 +71,14 @@ def check_stat_alarms(stats, alarms):
 
         for y_value in stat.y_axis_value:
             if cmp_func(y_value):
-                send_alarm_email(alarm_setting)
+                send_alarm_email(stats.host_id, alarm_setting)
 
 
 def check_info_alarms(infos, alarms):
     for info in infos.basic_infos:
+        if info.id not in alarms:
+            continue
+
         alarm_setting = alarms[info.id]
         threshold_type = alarm_setting['threshold_type']
         if threshold_type == 'string':
@@ -71,8 +90,8 @@ def check_info_alarms(infos, alarms):
         else:
             assert False
 
-        if cmp_func(info.info):
-            send_alarm_email(alarm_setting)
+        if cmp_func(json.loads(info.info)):
+            send_alarm_email(infos.host_id, alarm_setting)
 
 
 class MonsitServiceImpl(monsit_pb2.MonsitService):
@@ -120,7 +139,7 @@ class MonsitServiceImpl(monsit_pb2.MonsitService):
             rsp = monsit_pb2.ReportResponse(return_code=1, msg='Host not registered')
             return rsp
 
-        print request
+#         print request
 
         # insert the connection time to the info
         connection_info = {'connected': True, 'datetime': request.datetime}
@@ -185,19 +204,49 @@ class MonsitServiceImpl(monsit_pb2.MonsitService):
                     basic_info.info = json.dumps(connection_info, separators=(',', ':'))
                     conn.update_info(req)
 
+                    _, info_alarms = conn.get_alarm_settings(host_id)
+                    check_info_alarms(req, info_alarms)
+
                 if conn is not None:
                     conn.commit()
                     conn.close()
 
 
-if __name__ == '__main__':
+def main():
+    global _mail_server, _from_domain
+
+    optparser = optparse.OptionParser(usage = "%prog [options]")
+    optparser.add_option('-p', '--port', dest="master_port",
+                         help="Port of the master", type=int, default=30002)
+    optparser.add_option('-m', '--mail-server', dest="mail_server",
+                         help="The mail server used to send email")
+    optparser.add_option('--from-domain', dest="from_domain",
+                         help="The from domain used in the email")
+
+    opts, _ = optparser.parse_args()
+    master_port = opts.master_port
+    if opts.mail_server is not None:
+        _mail_server = opts.mail_server
+        print 'mail_server', _mail_server
+    if opts.from_domain is not None:
+        _from_domain = opts.from_domain
+        print 'from_domain', _from_domain
+    
     db.init()
 
     service = MonsitServiceImpl()
-    rpc_server = RpcServer(('0.0.0.0', 30002))
+    master_addr = ('0.0.0.0', master_port)
+    rpc_server = RpcServer(master_addr)
+    print 'master listen on', master_addr
     rpc_server.register_service(service)
     try:
         rpc_server.run(print_stat_interval=60)
     except KeyboardInterrupt:
         print 'monsit got SIGINT, exit.'
         kill_all_workers()
+
+
+if __name__ == '__main__':
+    main()
+
+
