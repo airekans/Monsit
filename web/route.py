@@ -104,6 +104,12 @@ def add_stat():
                            value_types=db.ValueType.value_type_str)
 
 
+@app.route("/do_add_stat", methods=['POST'])
+def do_add_stat():
+    print 'req_form', request.form
+    return 'OK'
+
+
 if __name__ == "__main__":
     db.init()
     app.run(host='0.0.0.0', debug=True)
