@@ -93,7 +93,15 @@ def ajax_host_info():
 
 @app.route("/add_stat.html")
 def add_stat():
-    return render_template('add_stat.html')
+    with db.DBConnection() as cnx:
+        host_infos = []
+        for host in cnx.get_all_hosts():
+            host_id = host[0]
+            host_name = host[1]
+            host_infos.append(HostInfo(host_id, host_name, True, None))
+
+    return render_template('add_stat.html', hosts=host_infos,
+                           value_types=db.ValueType.value_type_str)
 
 
 if __name__ == "__main__":

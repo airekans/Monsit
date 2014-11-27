@@ -73,6 +73,8 @@ class ValueType(object):
                        'double', 'varchar(25)']
     _mysql_value_fmt_str = ['invalid', '%d',
                             '%f', "'%s'"]
+    value_type_str = [(Int, 'int'), (Double, 'double'),
+                      (String, 'string')]
 
     @staticmethod
     def get_mysql_type_str(value_type):
