@@ -91,6 +91,11 @@ def ajax_host_info():
             return jsonify(return_code=1)
 
 
+@app.route("/add_stat.html")
+def add_stat():
+    return render_template('add_stat.html')
+
+
 if __name__ == "__main__":
     db.init()
     app.run(host='0.0.0.0', debug=True)
