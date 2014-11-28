@@ -121,6 +121,24 @@ def do_add_stat():
                            msg=('New stat id is %d' % stat_id))
 
 
+@app.route("/add_info.html")
+def add_info():
+    with db.DBConnection() as cnx:
+        host_infos = []
+        for host in cnx.get_all_hosts():
+            host_id = host[0]
+            host_name = host[1]
+            host_infos.append(HostInfo(host_id, host_name, True, None))
+
+    return render_template('add_info.html', hosts=host_infos)
+
+
+@app.route("/do_add_info", methods=['POST'])
+def do_add_info():
+    print request.form
+    return 'OK'
+
+
 if __name__ == "__main__":
     db.init()
     app.run(host='0.0.0.0', debug=True)
