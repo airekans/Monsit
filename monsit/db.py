@@ -156,17 +156,16 @@ class DBConnection(object):
         assert field_type is not None
         return field_type
 
-    def insert_builtin_fields(self, cursor, host_id):
-        builtin_field_configs = [
-            ('cpu_total', 'Total Usage', ValueType.Int, '%'),  # 1
-            ('network_recv', 'Recv', ValueType.Int, 'KB'),  # 2
-            ('network_send', 'Send', ValueType.Int, 'KB'),  # 3
-            ('virtual_mem', 'Physical Memory', ValueType.Int, '%'),  # 4
-            ('swap_mem', 'Swap Memory', ValueType.Int, '%'),  # 5
-            ('disk_io_write', 'Write', ValueType.Int, 'KB'),  # 6
-            ('disk_io_read', 'Read', ValueType.Int, 'KB')  # 7
-        ]
+    def insert_new_stat(self, host_id, stat_name,
+                        chart_name, y_value_type, y_unit):
+        cursor = self.__cnx.cursor()
+        return self.insert_new_stat_with_cursor(cursor, host_id,
+                                                stat_name,
+                                                chart_name,
+                                                y_value_type, y_unit)
 
+    def insert_new_stat_with_cursor(self, cursor, host_id, stat_name,
+                chart_name, y_value_type, y_unit):
         hostinfo_tbl_name = TableNames.get_host_stat_info_table_name(host_id)
         insert_stmt_template = (
             "INSERT INTO %s SET"
@@ -184,20 +183,41 @@ class DBConnection(object):
             '  PRIMARY KEY (`id`)'
             ') ENGINE=InnoDB'
         )
+
+        insert_stmt = insert_stmt_template % (
+            hostinfo_tbl_name,
+            stat_name, chart_name, y_value_type, y_unit
+        )
+        cursor.execute(insert_stmt)
+
+        field_id = self.get_field_id(cursor, stat_name, host_id)
+        stat_tbl_name = TableNames.get_stat_table_name(host_id, field_id)
+        create_stmt = create_stmt_template % (
+            stat_tbl_name, ValueType.get_mysql_type_str(y_value_type)
+        )
+        cursor.execute(create_stmt)
+
+        cursor.execute('SELECT LAST_INSERT_ID()')
+        for res in cursor:
+            return res[0]
+
+        assert False
+
+    def insert_builtin_fields(self, cursor, host_id):
+        builtin_field_configs = [
+            ('cpu_total', 'Total Usage', ValueType.Int, '%'),  # 1
+            ('network_recv', 'Recv', ValueType.Int, 'KB'),  # 2
+            ('network_send', 'Send', ValueType.Int, 'KB'),  # 3
+            ('virtual_mem', 'Physical Memory', ValueType.Int, '%'),  # 4
+            ('swap_mem', 'Swap Memory', ValueType.Int, '%'),  # 5
+            ('disk_io_write', 'Write', ValueType.Int, 'KB'),  # 6
+            ('disk_io_read', 'Read', ValueType.Int, 'KB')  # 7
+        ]
+
         for config in builtin_field_configs:
             stat_name, chart_name, y_value_type, y_unit = config
-            insert_stmt = insert_stmt_template % (
-                hostinfo_tbl_name,
-                stat_name, chart_name, y_value_type, y_unit
-            )
-            cursor.execute(insert_stmt)
-
-            field_id = self.get_field_id(cursor, stat_name, host_id)
-            stat_tbl_name = TableNames.get_stat_table_name(host_id, field_id)
-            create_stmt = create_stmt_template % (
-                stat_tbl_name, ValueType.get_mysql_type_str(y_value_type)
-            )
-            cursor.execute(create_stmt)
+            self.insert_new_stat_with_cursor(cursor, stat_name,
+                                             chart_name, y_value_type, y_unit)
 
     def insert_builtin_infos(self, cursor, host_id):
         builtin_info_configs = [

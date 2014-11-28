@@ -106,8 +106,19 @@ def add_stat():
 
 @app.route("/do_add_stat", methods=['POST'])
 def do_add_stat():
-    print 'req_form', request.form
-    return 'OK'
+    host_id = int(request.form['host_id'])
+    stat_name = request.form['stat_name']
+    chart_name = request.form['chart_name']
+    y_value_type = int(request.form['value_type'])
+    y_unit = request.form['unit']
+
+    with db.DBConnection() as cnx:
+        stat_id = cnx.insert_new_stat(host_id, stat_name, chart_name,
+                                      y_value_type, y_unit)
+        cnx.commit()
+
+    return render_template('admin_msg.html',
+                           msg=('New stat id is %d' % stat_id))
 
 
 if __name__ == "__main__":
