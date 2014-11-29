@@ -91,6 +91,62 @@ def ajax_host_info():
             return jsonify(return_code=1)
 
 
+@app.route("/add_stat.html")
+def add_stat():
+    with db.DBConnection() as cnx:
+        host_infos = []
+        for host in cnx.get_all_hosts():
+            host_id = host[0]
+            host_name = host[1]
+            host_infos.append(HostInfo(host_id, host_name, True, None))
+
+    return render_template('add_stat.html', hosts=host_infos,
+                           value_types=db.ValueType.value_type_str)
+
+
+@app.route("/do_add_stat", methods=['POST'])
+def do_add_stat():
+    host_id = int(request.form['host_id'])
+    stat_name = request.form['stat_name']
+    chart_name = request.form['chart_name']
+    y_value_type = int(request.form['value_type'])
+    y_unit = request.form['unit']
+
+    with db.DBConnection() as cnx:
+        stat_id = cnx.insert_new_stat(host_id, stat_name, chart_name,
+                                      y_value_type, y_unit)
+        cnx.commit()
+
+    return render_template('admin_msg.html',
+                           msg=('New stat id is %d' % stat_id))
+
+
+@app.route("/add_info.html")
+def add_info():
+    with db.DBConnection() as cnx:
+        host_infos = []
+        for host in cnx.get_all_hosts():
+            host_id = host[0]
+            host_name = host[1]
+            host_infos.append(HostInfo(host_id, host_name, True, None))
+
+    return render_template('add_info.html', hosts=host_infos)
+
+
+@app.route("/do_add_info", methods=['POST'])
+def do_add_info():
+    host_id = int(request.form['host_id'])
+    info_name = request.form['info_name']
+    chart_name = request.form['chart_name']
+
+    with db.DBConnection() as cnx:
+        info_id = cnx.insert_new_info(host_id, info_name, chart_name)
+        cnx.commit()
+
+    return render_template('admin_msg.html',
+                           msg=('New info id is %d' % info_id))
+
+
 if __name__ == "__main__":
     db.init()
     app.run(host='0.0.0.0', debug=True)

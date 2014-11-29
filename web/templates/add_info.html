@@ -1,0 +1,25 @@
+{% extends "admin_base.html" %}
+{% block content %}
+  <div class="page-header">
+    <h1>Add Info</h1>
+  </div>
+  <form role="form" method="post" action="do_add_info">
+    <div class="form-group">
+      <label class="control-label">Host</label>
+      <select class="form-control" name="host_id">
+        {% for host in hosts %}
+        <option value="{{ host.id }}" {% if loop.index == 1 %}selected="selected"{% endif %}>{{ host.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group input-group">
+      <span class="input-group-addon">Info Name</span>
+      <input type="text" class="form-control" name="info_name">
+    </div>
+    <div class="form-group input-group">
+      <span class="input-group-addon">Chart Name</span>
+      <input type="text" class="form-control" name="chart_name">
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>
+{% endblock %}

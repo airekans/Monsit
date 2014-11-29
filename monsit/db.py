@@ -73,6 +73,8 @@ class ValueType(object):
                        'double', 'varchar(25)']
     _mysql_value_fmt_str = ['invalid', '%d',
                             '%f', "'%s'"]
+    value_type_str = [(Int, 'int'), (Double, 'double'),
+                      (String, 'string')]
 
     @staticmethod
     def get_mysql_type_str(value_type):
@@ -125,7 +127,7 @@ class DBConnection(object):
 
         return None
 
-    def get_field_id(self, cursor, stat_name, host_id):
+    def get_stat_id(self, cursor, stat_name, host_id):
         select_stmt = (
             "SELECT field_id FROM %s"
             " WHERE stat_name='%s'"
@@ -140,7 +142,7 @@ class DBConnection(object):
         assert field_id is not None
         return field_id
 
-    def get_field_type(self, cursor, host_tbl_name, field_id):
+    def get_stat_value_type(self, cursor, host_tbl_name, field_id):
         select_stmt = (
             "SELECT y_value_type FROM %s"
             " WHERE field_id = %d"
@@ -154,17 +156,16 @@ class DBConnection(object):
         assert field_type is not None
         return field_type
 
-    def insert_builtin_fields(self, cursor, host_id):
-        builtin_field_configs = [
-            ('cpu_total', 'Total Usage', ValueType.Int, '%'),  # 1
-            ('network_recv', 'Recv', ValueType.Int, 'KB'),  # 2
-            ('network_send', 'Send', ValueType.Int, 'KB'),  # 3
-            ('virtual_mem', 'Physical Memory', ValueType.Int, '%'),  # 4
-            ('swap_mem', 'Swap Memory', ValueType.Int, '%'),  # 5
-            ('disk_io_write', 'Write', ValueType.Int, 'KB'),  # 6
-            ('disk_io_read', 'Read', ValueType.Int, 'KB')  # 7
-        ]
+    def insert_new_stat(self, host_id, stat_name,
+                        chart_name, y_value_type, y_unit):
+        cursor = self.__cnx.cursor()
+        return self.insert_new_stat_with_cursor(cursor, host_id,
+                                                stat_name,
+                                                chart_name,
+                                                y_value_type, y_unit)
 
+    def insert_new_stat_with_cursor(self, cursor, host_id, stat_name,
+                chart_name, y_value_type, y_unit):
         hostinfo_tbl_name = TableNames.get_host_stat_info_table_name(host_id)
         insert_stmt_template = (
             "INSERT INTO %s SET"
@@ -182,38 +183,72 @@ class DBConnection(object):
             '  PRIMARY KEY (`id`)'
             ') ENGINE=InnoDB'
         )
+
+        insert_stmt = insert_stmt_template % (
+            hostinfo_tbl_name,
+            stat_name, chart_name, y_value_type, y_unit
+        )
+        cursor.execute(insert_stmt)
+
+        field_id = self.get_stat_id(cursor, stat_name, host_id)
+        stat_tbl_name = TableNames.get_stat_table_name(host_id, field_id)
+        create_stmt = create_stmt_template % (
+            stat_tbl_name, ValueType.get_mysql_type_str(y_value_type)
+        )
+        cursor.execute(create_stmt)
+
+        cursor.execute('SELECT LAST_INSERT_ID()')
+        for res in cursor:
+            return res[0]
+
+        assert False
+
+    def insert_builtin_fields(self, cursor, host_id):
+        builtin_field_configs = [
+            ('cpu_total', 'Total Usage', ValueType.Int, '%'),  # 1
+            ('network_recv', 'Recv', ValueType.Int, 'KB'),  # 2
+            ('network_send', 'Send', ValueType.Int, 'KB'),  # 3
+            ('virtual_mem', 'Physical Memory', ValueType.Int, '%'),  # 4
+            ('swap_mem', 'Swap Memory', ValueType.Int, '%'),  # 5
+            ('disk_io_write', 'Write', ValueType.Int, 'KB'),  # 6
+            ('disk_io_read', 'Read', ValueType.Int, 'KB')  # 7
+        ]
+
         for config in builtin_field_configs:
             stat_name, chart_name, y_value_type, y_unit = config
-            insert_stmt = insert_stmt_template % (
-                hostinfo_tbl_name,
-                stat_name, chart_name, y_value_type, y_unit
-            )
-            cursor.execute(insert_stmt)
+            self.insert_new_stat_with_cursor(cursor, stat_name,
+                                             chart_name, y_value_type, y_unit)
 
-            field_id = self.get_field_id(cursor, stat_name, host_id)
-            stat_tbl_name = TableNames.get_stat_table_name(host_id, field_id)
-            create_stmt = create_stmt_template % (
-                stat_tbl_name, ValueType.get_mysql_type_str(y_value_type)
-            )
-            cursor.execute(create_stmt)
+    def insert_new_info(self, host_id, info_name, chart_name):
+        cursor = self.__cnx.cursor()
+        return self.insert_new_info_with_cursor(cursor, host_id,
+                                                info_name, chart_name)
+
+    def insert_new_info_with_cursor(self, cursor, host_id,
+                                    info_name, chart_name):
+        host_info_table_name = TableNames.get_host_info_table_name(host_id)
+        insert_stmt = (
+            "INSERT INTO %s SET"
+            " info_name='%s',"
+            " chart_name='%s'"
+        ) % (host_info_table_name, info_name, chart_name)
+        cursor.execute(insert_stmt)
+
+        cursor.execute('SELECT LAST_INSERT_ID()')
+        for res in cursor:
+            return res[0]
+
+        assert False
 
     def insert_builtin_infos(self, cursor, host_id):
         builtin_info_configs = [
             ('host_connected', 'Connection')  # 1
         ]
 
-        host_info_table_name = TableNames.get_host_info_table_name(host_id)
-        insert_stmt_template = (
-            "INSERT INTO %s SET"
-            " info_name='%s',"
-            " chart_name='%s'"
-        )
-
         for config in builtin_info_configs:
             info_name, chart_name = config
-            insert_stmt = insert_stmt_template % (
-                host_info_table_name, info_name, chart_name)
-            cursor.execute(insert_stmt)
+            self.insert_new_info_with_cursor(cursor, host_id,
+                                             info_name, chart_name)
 
     def insert_new_host(self, host_name):
         cursor = self.__cnx.cursor()
@@ -285,7 +320,7 @@ class DBConnection(object):
 
         for stat in stat_req.stat:
             field_id = stat.id
-            field_type = self.get_field_type(cursor, host_tbl_name, field_id)
+            field_type = self.get_stat_value_type(cursor, host_tbl_name, field_id)
 
             stat_tbl_name = TableNames.get_stat_table_name(host_id, field_id)
             for y_value in stat.y_axis_value:
@@ -319,6 +354,44 @@ class DBConnection(object):
                 info_tbl_name, info.info.encode('hex_codec'), info.id
             )
             cursor.execute(update_stmt)
+
+    def insert_alarm_setting(self, host_id, alarm_name,
+                             alarm_type, stat_or_info_id,
+                             threshold_type, threshold,
+                             message, emails):
+        cursor = self.__cnx.cursor()
+        self.insert_alarm_setting_with_cursor(
+            cursor, host_id, alarm_name, alarm_type, stat_or_info_id,
+            threshold_type, threshold, message, emails)
+
+    def insert_alarm_setting_with_cursor(
+            self, cursor, host_id, alarm_name,
+            alarm_type, stat_or_info_id,
+            threshold_type, threshold, message, emails):
+        alarm_setting_tbl = TableNames.get_host_alarm_table_name(host_id)
+        if threshold_type == 'int':
+            threshold = struct.pack('q', threshold)
+        elif threshold_type == 'double':
+            threshold = struct.pack('d', threshold)
+
+        insert_stmt = (
+            "INSERT INTO %s SET"
+            "  alarm_name='%s',"
+            "  type='%s',"
+            "  %s=%d,"
+            "  threshold_type='%s',"
+            "  threshold=0x%s,"
+            "  message='%s',"
+            "  emails='%s'"
+        ) % (
+            alarm_setting_tbl, alarm_name, alarm_type,
+            ('info_id' if alarm_type == 'info_alarm' else 'stat_id'),
+            stat_or_info_id, threshold_type,
+            threshold.encode('hex_codec'),
+            message, emails
+        )
+
+        cursor.execute(insert_stmt)
 
     def get_alarm_settings(self, host_id):
         cursor = self.__cnx.cursor()
