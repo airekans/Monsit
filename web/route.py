@@ -135,8 +135,17 @@ def add_info():
 
 @app.route("/do_add_info", methods=['POST'])
 def do_add_info():
-    print request.form
-    return 'OK'
+    host_id = int(request.form['host_id'])
+    info_name = request.form['info_name']
+    chart_name = request.form['chart_name']
+    print 'host_id', host_id
+
+    with db.DBConnection() as cnx:
+        info_id = cnx.insert_new_info(host_id, info_name, chart_name)
+        cnx.commit()
+
+    return render_template('admin_msg.html',
+                           msg=('New info id is %d' % info_id))
 
 
 if __name__ == "__main__":

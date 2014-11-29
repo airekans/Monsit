@@ -219,23 +219,36 @@ class DBConnection(object):
             self.insert_new_stat_with_cursor(cursor, stat_name,
                                              chart_name, y_value_type, y_unit)
 
+    def insert_new_info(self, host_id, info_name, chart_name):
+        cursor = self.__cnx.cursor()
+        return self.insert_new_info_with_cursor(cursor, host_id,
+                                                info_name, chart_name)
+
+    def insert_new_info_with_cursor(self, cursor, host_id,
+                                    info_name, chart_name):
+        host_info_table_name = TableNames.get_host_info_table_name(host_id)
+        insert_stmt = (
+            "INSERT INTO %s SET"
+            " info_name='%s',"
+            " chart_name='%s'"
+        ) % (host_info_table_name, info_name, chart_name)
+        cursor.execute(insert_stmt)
+
+        cursor.execute('SELECT LAST_INSERT_ID()')
+        for res in cursor:
+            return res[0]
+
+        assert False
+
     def insert_builtin_infos(self, cursor, host_id):
         builtin_info_configs = [
             ('host_connected', 'Connection')  # 1
         ]
 
-        host_info_table_name = TableNames.get_host_info_table_name(host_id)
-        insert_stmt_template = (
-            "INSERT INTO %s SET"
-            " info_name='%s',"
-            " chart_name='%s'"
-        )
-
         for config in builtin_info_configs:
             info_name, chart_name = config
-            insert_stmt = insert_stmt_template % (
-                host_info_table_name, info_name, chart_name)
-            cursor.execute(insert_stmt)
+            self.insert_new_info_with_cursor(cursor, host_id,
+                                             info_name, chart_name)
 
     def insert_new_host(self, host_name):
         cursor = self.__cnx.cursor()
