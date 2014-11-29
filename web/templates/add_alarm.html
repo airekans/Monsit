@@ -1,0 +1,54 @@
+{% extends "admin_base.html" %}
+{% block content %}
+  <div class="page-header">
+    <h1>Add Alarm</h1>
+  </div>
+  <form role="form" method="post" action="do_add_alarm">
+    <div class="form-group">
+      <label class="control-label">Host</label>
+      <select class="form-control" name="host_id">
+        {% for host in hosts %}
+        <option value="{{ host.id }}" {% if loop.index == 1 %}selected="selected"{% endif %}>{{ host.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group input-group">
+      <span class="input-group-addon">Alarm Name</span>
+      <input type="text" class="form-control" name="alarm_name">
+    </div>
+    <div class="form-group">
+      <label class="control-label">Alarm Type</label>
+      <select class="form-control" name="alarm_type">
+        <option value="info_alarm" selected="selected">Info Alarm</option>
+        <option value="stat_alarm">Stat Alarm</option>
+      </select>
+    </div>
+    <div class="form-group input-group">
+      <span class="input-group-addon">Stat/Info ID</span>
+      <input type="text" class="form-control" name="stat_info_id">
+    </div>
+    <div class="form-group">
+      <label class="control-label">Threshold Type</label>
+      <select class="form-control" name="threshold_type">
+        <option value="int" selected="selected">int</option>
+        <option value="double">double</option>
+        <option value="string">string</option>
+        <option value="json">json</option>
+        <option value="func">function</option>
+      </select>
+    </div>
+    <div class="form-group input-group">
+      <span class="input-group-addon">Threshold</span>
+      <textarea class="form-control" rows="5" name="threshold"></textarea>
+    </div>
+    <div class="form-group input-group">
+      <span class="input-group-addon">Message</span>
+      <textarea class="form-control" rows="3" name="message"></textarea>
+    </div>
+    <div class="form-group input-group">
+      <span class="input-group-addon">Emails(';' separated)</span>
+      <input type="text" class="form-control" name="emails">
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>
+{% endblock %}

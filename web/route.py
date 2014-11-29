@@ -147,6 +147,44 @@ def do_add_info():
                            msg=('New info id is %d' % info_id))
 
 
+@app.route("/add_alarm.html")
+def add_alarm():
+    with db.DBConnection() as cnx:
+        host_infos = []
+        for host in cnx.get_all_hosts():
+            host_id = host[0]
+            host_name = host[1]
+            host_infos.append(HostInfo(host_id, host_name, True, None))
+
+    return render_template('add_alarm.html', hosts=host_infos)
+
+
+@app.route("/do_add_alarm", methods=['POST'])
+def do_add_alarm():
+    host_id = int(request.form['host_id'])
+    alarm_name = request.form['alarm_name']
+    alarm_type = request.form['alarm_type']
+    stat_or_info_id = int(request.form['stat_info_id'])
+    threshold_type = request.form['threshold_type']
+    threshold = request.form['threshold']
+    if threshold_type == 'int':
+        threshold = int(threshold)
+    elif threshold_type == 'double':
+        threshold = float(threshold)
+
+    message = request.form['message']
+    emails = request.form['emails']
+
+    with db.DBConnection() as cnx:
+        cnx.insert_alarm_setting(host_id, alarm_name, alarm_type,
+                                 stat_or_info_id, threshold_type,
+                                 threshold, message, emails)
+        cnx.commit()
+
+    return render_template('admin_msg.html',
+                           msg='Alarm has been added successfully')
+
+
 if __name__ == "__main__":
     db.init()
     app.run(host='0.0.0.0', debug=True)

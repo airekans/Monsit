@@ -136,7 +136,6 @@ class DBConnection(object):
 
         field_id = None
         for res in cursor:
-            print 'res type', type(res), len(res)
             field_id = res[0]
 
         assert field_id is not None
@@ -216,7 +215,7 @@ class DBConnection(object):
 
         for config in builtin_field_configs:
             stat_name, chart_name, y_value_type, y_unit = config
-            self.insert_new_stat_with_cursor(cursor, stat_name,
+            self.insert_new_stat_with_cursor(cursor, host_id, stat_name,
                                              chart_name, y_value_type, y_unit)
 
     def insert_new_info(self, host_id, info_name, chart_name):
