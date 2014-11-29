@@ -127,7 +127,7 @@ class DBConnection(object):
 
         return None
 
-    def get_field_id(self, cursor, stat_name, host_id):
+    def get_stat_id(self, cursor, stat_name, host_id):
         select_stmt = (
             "SELECT field_id FROM %s"
             " WHERE stat_name='%s'"
@@ -142,7 +142,7 @@ class DBConnection(object):
         assert field_id is not None
         return field_id
 
-    def get_field_type(self, cursor, host_tbl_name, field_id):
+    def get_stat_value_type(self, cursor, host_tbl_name, field_id):
         select_stmt = (
             "SELECT y_value_type FROM %s"
             " WHERE field_id = %d"
@@ -190,7 +190,7 @@ class DBConnection(object):
         )
         cursor.execute(insert_stmt)
 
-        field_id = self.get_field_id(cursor, stat_name, host_id)
+        field_id = self.get_stat_id(cursor, stat_name, host_id)
         stat_tbl_name = TableNames.get_stat_table_name(host_id, field_id)
         create_stmt = create_stmt_template % (
             stat_tbl_name, ValueType.get_mysql_type_str(y_value_type)
@@ -320,7 +320,7 @@ class DBConnection(object):
 
         for stat in stat_req.stat:
             field_id = stat.id
-            field_type = self.get_field_type(cursor, host_tbl_name, field_id)
+            field_type = self.get_stat_value_type(cursor, host_tbl_name, field_id)
 
             stat_tbl_name = TableNames.get_stat_table_name(host_id, field_id)
             for y_value in stat.y_axis_value:

@@ -138,7 +138,6 @@ def do_add_info():
     host_id = int(request.form['host_id'])
     info_name = request.form['info_name']
     chart_name = request.form['chart_name']
-    print 'host_id', host_id
 
     with db.DBConnection() as cnx:
         info_id = cnx.insert_new_info(host_id, info_name, chart_name)
