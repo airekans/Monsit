@@ -355,6 +355,44 @@ class DBConnection(object):
             )
             cursor.execute(update_stmt)
 
+    def insert_alarm_setting(self, host_id, alarm_name,
+                             alarm_type, stat_or_info_id,
+                             threshold_type, threshold,
+                             message, emails):
+        cursor = self.__cnx.cursor()
+        self.insert_alarm_setting_with_cursor(
+            cursor, host_id, alarm_name, alarm_type, stat_or_info_id,
+            threshold_type, threshold, message, emails)
+
+    def insert_alarm_setting_with_cursor(
+            self, cursor, host_id, alarm_name,
+            alarm_type, stat_or_info_id,
+            threshold_type, threshold, message, emails):
+        alarm_setting_tbl = TableNames.get_host_alarm_table_name(host_id)
+        if threshold_type == 'int':
+            threshold = struct.pack('q', threshold)
+        elif threshold_type == 'double':
+            threshold = struct.pack('d', threshold)
+
+        insert_stmt = (
+            "INSERT INTO %s SET"
+            "  alarm_name='%s',"
+            "  type='%s',"
+            "  %s=%d,"
+            "  threshold_type='%s',"
+            "  threshold=0x%s,"
+            "  message='%s',"
+            "  emails='%s'"
+        ) % (
+            alarm_setting_tbl, alarm_name, alarm_type,
+            ('info_id' if alarm_type == 'info_alarm' else 'stat_id'),
+            stat_or_info_id, threshold_type,
+            threshold.encode('hex_codec'),
+            message, emails
+        )
+
+        cursor.execute(insert_stmt)
+
     def get_alarm_settings(self, host_id):
         cursor = self.__cnx.cursor()
         select_stmt = "SELECT * FROM %s" % TableNames.get_host_alarm_table_name(host_id)
