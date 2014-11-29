@@ -1,0 +1,90 @@
+{% extends "admin_base.html" %}
+{% block content %}
+  <script>
+    var section_id = 1;
+    function add_section(elem_id) {
+        var section_id_str = 'section_' + section_id;
+        var add_stat_stmt = "add_stat_chart('#" + section_id_str + "')";
+        var add_info_stmt = "add_info_chart('#" + section_id_str + "')";
+        section_id += 1;
+        var section_html =
+            '<div class="section" style="border:1px solid;">' +
+            '  <div class="form-group input-group">' +
+            '    <span class="input-group-addon">Section Name</span>' +
+            '    <input type="text" class="form-control section-name">' +
+            '  </div>' +
+            '  <div id="' + section_id_str + '" class="section_charts">' +
+            '  </div>' +
+            '  <div class="btn-group" role="group" aria-label="...">' +
+            '    <button type="button" class="btn btn-default" onclick="' + add_stat_stmt + '">Add Stat</button>' +
+            '    <button type="button" class="btn btn-default" onclick="' + add_info_stmt + '">Add Info</button>' +
+            '  </div>' +
+            '</div>';
+        $(elem_id).append(section_html);
+    }
+
+    function add_stat_chart(elem_id) {
+        var stat_chart_html =
+            '<div class="section_chart stat_chart">' +
+            '  <div class="form-group input-group">' +
+            '    <span class="input-group-addon">Stat ID</span>' +
+            '    <input type="text" class="form-control stat_id">' +
+            '  </div>' +
+            '</div>';
+        $(elem_id).append(stat_chart_html);
+    }
+
+    function add_info_chart(elem_id) {
+        var info_chart_html =
+            '<div class="section_chart info_chart">' +
+            '  <div class="form-group input-group">' +
+            '    <span class="input-group-addon">Info ID</span>' +
+            '    <input type="text" class="form-control info_id">' +
+            '  </div>' +
+            '</div>';
+        $(elem_id).append(info_chart_html);
+    }
+
+    function submit_form() {
+        // get the display setting and transform to json
+        var section_json = [];
+        $('.section').each(function() {
+            var section_name = $('.section-name', this).val();
+            var section_charts = [];
+            $('.section_charts .section_chart', this).each(function() {
+                $('input', this).each(function() {
+                    var input_elem = $(this);
+                    if (input_elem.hasClass('stat_id')) {
+                        section_charts.push({"type": "stat", "id": input_elem.val()});
+                    } else {
+                        section_charts.push({"type": "info", "id": input_elem.val()});
+                    }
+                });
+            });
+            section_json.push({"section_name": section_name, "charts": section_charts});
+        });
+        $('#display_setting').val(JSON.stringify(section_json));
+        $('form').submit();
+    }
+  </script>
+  <div class="page-header">
+    <h1>Set Display</h1>
+  </div>
+  <form role="form" method="post" action="do_set_display">
+    <input id="display_setting" type="hidden" name="display_setting" value="" />
+    <div id="display_form">
+      <div class="form-group">
+        <label class="control-label">Host</label>
+        <select class="form-control" name="host_id" id="host_id">
+          {% for host in hosts %}
+          <option value="{{ host.id }}" {% if loop.index == 1 %}selected="selected"{% endif %}>{{ host.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="btn-group" role="group" aria-label="...">
+      <button type="button" class="btn btn-primary" onclick="submit_form()">Submit</button>
+      <button type="button" class="btn btn-default" onclick="add_section('#display_form')">Add Section</button>
+    </div>
+  </form>
+{% endblock %}
