@@ -55,9 +55,9 @@
                 $('input', this).each(function() {
                     var input_elem = $(this);
                     if (input_elem.hasClass('stat_id')) {
-                        section_charts.push({"type": "stat", "id": input_elem.val()});
+                        section_charts.push({"type": "stat", "id": parseInt(input_elem.val())});
                     } else {
-                        section_charts.push({"type": "info", "id": input_elem.val()});
+                        section_charts.push({"type": "info", "id": parseInt(input_elem.val())});
                     }
                 });
             });

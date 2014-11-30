@@ -199,8 +199,16 @@ def set_display():
 
 @app.route("/do_set_display", methods=['POST'])
 def do_set_display():
-    print request.form
-    return 'OK'
+    host_id = int(request.form['host_id'])
+    display_setting = request.form['display_setting']
+
+    with db.DBConnection() as cnx:
+        cnx.update_display_setting(host_id, display_setting)
+        cnx.commit()
+
+    return render_template(
+        'admin_msg.html',
+        msg=('Display for host %d is set successfully' % host_id))
 
 
 if __name__ == "__main__":

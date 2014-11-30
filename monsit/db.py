@@ -10,9 +10,34 @@ _DB_CONFIG = {'host': '127.0.0.1',
               'database': 'monsit'}
 _POOL_SIZE = mysql.connector.pooling.CNX_POOL_MAXSIZE
 
+_DEFAULT_DISPLAY_SETTING = [
+    {
+        "section_name": "CPU",
+        "charts": [{"type": "stat", "id": 1}]
+    },
+    {
+        "section_name": "Network",
+        "charts": [{"type": "stat", "id": 2},
+                   {"type": "stat", "id": 3}]
+    },
+    {
+        "section_name": "Memory",
+        "charts": [{"type": "stat", "id": 4},
+                   {"type": "stat", "id": 5}]
+    },
+    {
+        "section_name": "Disk",
+        "charts": [{"type": "stat", "id": 6},
+                   {"type": "stat", "id": 7}]
+    }
+]
+_DEFAULT_DISPLAY_SETTING_STR = json.dumps(_DEFAULT_DISPLAY_SETTING,
+                                          separators=(',', ':'))
+
 
 class TableNames(object):
     hosts_tbl = 'hosts'
+    display_setting_tbl = 'host_display_setting'
 
     @staticmethod
     def get_host_stat_info_table_name(host_id):
@@ -41,6 +66,17 @@ def _create_global_tables(cnx):
         ') ENGINE=InnoDB'
     ) % TableNames.hosts_tbl
     cursor.execute(host_table_stmt)
+
+    host_display_table_stmt = (
+        'CREATE TABLE IF NOT EXISTS `%s` ('
+        '  `id` int(11) NOT NULL AUTO_INCREMENT,'
+        '  `host_id` int(11) NOT NULL,'
+        '  `display_json` varchar(60000) NOT NULL,'
+        '  PRIMARY KEY (`id`)'
+        ') ENGINE=InnoDB'
+    ) % TableNames.display_setting_tbl
+    cursor.execute(host_display_table_stmt)
+
     cnx.commit()
 
 
@@ -259,6 +295,15 @@ class DBConnection(object):
 
         host_id, _ = self.get_host_info(host_name)
 
+        # insert default display setting.
+        display_setting_insert_stmt = (
+            "INSERT INTO %s SET"
+            " host_id=%d,"
+            " display_json='%s'"
+        ) % (TableNames.display_setting_tbl, host_id,
+             _DEFAULT_DISPLAY_SETTING_STR)
+        cursor.execute(display_setting_insert_stmt)
+
         create_host_stat_info_tbl_stmt = (
             'CREATE TABLE IF NOT EXISTS `%s` ('
             '  `field_id` int(11) NOT NULL AUTO_INCREMENT,'
@@ -294,7 +339,7 @@ class DBConnection(object):
             "  `stat_id` int(11),"
             "  `info_id` int(11),"
             "  `threshold_type` ENUM('int', 'double', 'string', 'json', 'func') NOT NULL,"
-            "  `threshold` varbinary(64) NOT NULL,"
+            "  `threshold` varbinary(10000) NOT NULL,"
             "  `message` varchar(256),"
             "  `emails` varchar(256),"
             "  PRIMARY KEY (`alarm_id`)"
@@ -338,6 +383,17 @@ class DBConnection(object):
                     report_time
                 )
                 cursor.execute(insert_stmt)
+
+    def update_display_setting(self, host_id, display_setting):
+        cursor = self.__cnx.cursor()
+        display_setting_tbl = TableNames.display_setting_tbl
+        update_stmt = (
+            "UPDATE %s SET"
+            " display_json='%s'"
+            " WHERE host_id=%d"
+        ) % (display_setting_tbl, display_setting, host_id)
+
+        cursor.execute(update_stmt)
 
     def update_info(self, info_req):
         info_tbl_name = TableNames.get_host_info_table_name(info_req.host_id)
