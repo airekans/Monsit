@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, abort, jsonify
+from flask import Markup
 from monsit import db
 import datetime
 import json
@@ -36,7 +37,11 @@ def hostinfo():
     except (KeyError, ValueError):
         abort(404)
 
-    return render_template('hostinfo.html', host_id=host_id, host_name=host_name)
+    with db.DBConnection() as cnx:
+        display_setting = cnx.get_display_setting(host_id)
+
+    return render_template('hostinfo.html', host_id=host_id, host_name=host_name,
+                           display_setting=Markup(display_setting))
 
 
 _DATE_FORMAT = '%Y-%m-%d %H:%M:%S'

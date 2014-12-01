@@ -28,7 +28,11 @@
             '<div class="section_chart stat_chart">' +
             '  <div class="form-group input-group">' +
             '    <span class="input-group-addon">Stat ID</span>' +
-            '    <input type="text" class="form-control stat_id">' +
+            '    <input type="text" class="form-control stat_id chart_id">' +
+            '  </div>' +
+            '  <div class="form-group input-group">' +
+            '    <span class="input-group-addon">Chart Name</span>' +
+            '    <input type="text" class="form-control chart_name">' +
             '  </div>' +
             '</div>';
         $(elem_id).append(stat_chart_html);
@@ -39,7 +43,11 @@
             '<div class="section_chart info_chart">' +
             '  <div class="form-group input-group">' +
             '    <span class="input-group-addon">Info ID</span>' +
-            '    <input type="text" class="form-control info_id">' +
+            '    <input type="text" class="form-control info_id chart_id">' +
+            '  </div>' +
+            '  <div class="form-group input-group">' +
+            '    <span class="input-group-addon">Chart Name</span>' +
+            '    <input type="text" class="form-control chart_name">' +
             '  </div>' +
             '</div>';
         $(elem_id).append(info_chart_html);
@@ -52,14 +60,14 @@
             var section_name = $('.section-name', this).val();
             var section_charts = [];
             $('.section_charts .section_chart', this).each(function() {
-                $('input', this).each(function() {
-                    var input_elem = $(this);
-                    if (input_elem.hasClass('stat_id')) {
-                        section_charts.push({"type": "stat", "id": parseInt(input_elem.val())});
-                    } else {
-                        section_charts.push({"type": "info", "id": parseInt(input_elem.val())});
-                    }
-                });
+                var chart_id = $('.chart_id', this);
+                if (chart_id.hasClass('stat_id')) {
+                    section_charts.push({"type": "stat", "id": parseInt(chart_id.val()),
+                                         "name": $('.chart_name', this).val()});
+                } else {
+                    section_charts.push({"type": "info", "id": parseInt(chart_id.val()),
+                                         "name": $('.chart_name', this).val()});
+                }
             });
             section_json.push({"section_name": section_name, "charts": section_charts});
         });

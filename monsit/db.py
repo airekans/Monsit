@@ -13,22 +13,22 @@ _POOL_SIZE = mysql.connector.pooling.CNX_POOL_MAXSIZE
 _DEFAULT_DISPLAY_SETTING = [
     {
         "section_name": "CPU",
-        "charts": [{"type": "stat", "id": 1}]
+        "charts": [{"type": "stat", "id": 1, "name": "Usage"}]
     },
     {
         "section_name": "Network",
-        "charts": [{"type": "stat", "id": 2},
-                   {"type": "stat", "id": 3}]
+        "charts": [{"type": "stat", "id": 2, "name": "Recv"},
+                   {"type": "stat", "id": 3, "name": "Send"}]
     },
     {
         "section_name": "Memory",
-        "charts": [{"type": "stat", "id": 4},
-                   {"type": "stat", "id": 5}]
+        "charts": [{"type": "stat", "id": 4, "name": "Physical Memory"},
+                   {"type": "stat", "id": 5, "name": "Swap Memory"}]
     },
     {
         "section_name": "Disk",
-        "charts": [{"type": "stat", "id": 6},
-                   {"type": "stat", "id": 7}]
+        "charts": [{"type": "stat", "id": 6, "name": "Write"},
+                   {"type": "stat", "id": 7, "name": "Read"}]
     }
 ]
 _DEFAULT_DISPLAY_SETTING_STR = json.dumps(_DEFAULT_DISPLAY_SETTING,
@@ -383,6 +383,19 @@ class DBConnection(object):
                     report_time
                 )
                 cursor.execute(insert_stmt)
+
+    def get_display_setting(self, host_id):
+        cursor = self.__cnx.cursor()
+        select_stmt = (
+            "SELECT display_json FROM %s"
+            " WHERE host_id=%d"
+        ) % (TableNames.display_setting_tbl, host_id)
+        cursor.execute(select_stmt)
+
+        for res in cursor:
+            return res[0]
+
+        assert False
 
     def update_display_setting(self, host_id, display_setting):
         cursor = self.__cnx.cursor()

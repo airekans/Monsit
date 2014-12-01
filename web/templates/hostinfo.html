@@ -4,43 +4,6 @@
 {% endblock %}
 {% block content %}
 <h1 class="page-header">{{ host_name }}<small>Host Information</small></h1>
-
-<h2 class="sub-header">CPU</h2>
-<div class="row placeholders">
-    <div class="col-xs-12 col-sm-12 placeholder">
-      <div id="cpu_chart" style="height:300px;"></div>
-    </div>
-</div>
-
-<h2 class="sub-header">Network</h2>
-<div class="row placeholders">
-    <div class="col-xs-12 col-sm-12 placeholder">
-      <div id="net_recv_chart" style="height:300px;"></div>
-    </div>
-    <div class="col-xs-12 col-sm-12 placeholder">
-      <div id="net_send_chart" style="height:300px;"></div>
-    </div>
-</div>
-
-<h2 class="sub-header">Memory</h2>
-<div class="row placeholders">
-    <div class="col-xs-12 col-sm-12 placeholder">
-      <div id="vmem_chart" style="height:300px;"></div>
-    </div>
-    <div class="col-xs-12 col-sm-12 placeholder">
-      <div id="swap_chart" style="height:300px;"></div>
-    </div>
-</div>
-
-<h2 class="sub-header">Disk</h2>
-<div class="row placeholders">
-    <div class="col-xs-12 col-sm-12 placeholder">
-      <div id="disk_io_write_chart" style="height:300px;"></div>
-    </div>
-    <div class="col-xs-12 col-sm-12 placeholder">
-      <div id="disk_io_read_chart" style="height:300px;"></div>
-    </div>
-</div>
 {% endblock %}
 
 {% block body_js %}
@@ -48,7 +11,38 @@
 <script>
 $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 var host_id = {{ host_id }};
+var display_setting = {{ display_setting }};
 $(function() {
+    var chart_data = {};
+    var main_div = $(".main");
+    for (var i = 0; i < display_setting.length; ++i) {
+        var section_setting = display_setting[i];
+        var section_header_html =
+                '<h2 class="sub-header">' + section_setting.section_name + '</h2>';
+        main_div.append(section_header_html);
+
+        var section_id = 'section_' + i;
+        var section_charts_div_html =
+                '<div class="row placeholders" id="' + section_id + '">' +
+                '</div>';
+        main_div.append(section_charts_div_html);
+        var section_charts_div = $("#" + section_id);
+
+        var section_charts = section_setting.charts;
+        for (var j = 0; j < section_charts.length; ++j) {
+            var chart_setting = section_charts[j];
+            if (chart_setting.type == 'stat') {
+                var chart_id = 'stat_chart_' + chart_setting.id;
+                var chart_div_html =
+                        '<div class="col-xs-12 col-sm-12 placeholder">' +
+                        '<div id="' + chart_id + '" style="height:300px;"></div>' +
+                        '</div>';
+                section_charts_div.append(chart_div_html);
+                chart_data[chart_id] = {title: chart_setting.name, stat_id: chart_setting.id};
+            }
+        }
+    }
+
     var auto_refresh_stat_ids = [];
     var auto_refresh_time_ticket = -1;
     var auto_refresh_interval = 30000;  // 30 seconds
@@ -95,29 +89,6 @@ $(function() {
         }
     }
 
-    var chart_data = {
-        cpu_chart: {title: 'Usage',
-                    stat_name: 'cpu', stat_id: 1
-                   },
-        net_recv_chart: {title: 'Recv',
-                         stat_name: 'net_recv', stat_id: 2
-                        },
-        net_send_chart: {title: 'Send',
-                         stat_name: 'net_send', stat_id: 3
-                        },
-        vmem_chart: {title: 'Physical Memory',
-                     stat_name: 'vmem', stat_id: 4
-                    },
-        swap_chart: {title: 'Swap Memory',
-                     stat_name: 'swap', stat_id: 5
-                    },
-        disk_io_write_chart: {title: 'Write',
-                              stat_name: 'disk_io_write', stat_id: 6
-                             },
-        disk_io_read_chart: {title: 'Read',
-                             stat_name: 'disk_io_read', stat_id: 7
-                            }
-    };
     var stat_ids = [];
     for (var chart_id in chart_data)
     {
