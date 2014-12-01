@@ -194,12 +194,18 @@ def do_add_alarm():
 def set_display():
     with db.DBConnection() as cnx:
         host_infos = []
+        first_host_id = False
         for host in cnx.get_all_hosts():
             host_id = host[0]
             host_name = host[1]
             host_infos.append(HostInfo(host_id, host_name, True, None))
+            if not first_host_id:
+                first_host_id = host_id
 
-    return render_template('set_display.html', hosts=host_infos)
+        display_setting = cnx.get_display_setting(first_host_id)
+
+    return render_template('set_display.html', hosts=host_infos,
+                           display_setting=Markup(display_setting))
 
 
 @app.route("/do_set_display", methods=['POST'])

@@ -2,7 +2,8 @@
 {% block content %}
   <script>
     var section_id = 1;
-    function add_section(elem_id) {
+    function add_section(elem_id, section_name) {
+        section_name = typeof section_name !== 'undefined' ? section_name : "";
         var section_id_str = 'section_' + section_id;
         var add_stat_stmt = "add_stat_chart('#" + section_id_str + "')";
         var add_info_stmt = "add_info_chart('#" + section_id_str + "')";
@@ -11,7 +12,7 @@
             '<div class="section" style="border:1px solid;">' +
             '  <div class="form-group input-group">' +
             '    <span class="input-group-addon">Section Name</span>' +
-            '    <input type="text" class="form-control section-name">' +
+            '    <input type="text" class="form-control section-name" value="' + section_name + '">' +
             '  </div>' +
             '  <div id="' + section_id_str + '" class="section_charts">' +
             '  </div>' +
@@ -21,33 +22,38 @@
             '  </div>' +
             '</div>';
         $(elem_id).append(section_html);
+        return section_id_str;
     }
 
-    function add_stat_chart(elem_id) {
+    function add_stat_chart(elem_id, stat_id, chart_name) {
+        stat_id = typeof stat_id !== 'undefined' ? stat_id : "";
+        chart_name = typeof chart_name !== 'undefined' ? chart_name : "";
         var stat_chart_html =
             '<div class="section_chart stat_chart">' +
             '  <div class="form-group input-group">' +
             '    <span class="input-group-addon">Stat ID</span>' +
-            '    <input type="text" class="form-control stat_id chart_id">' +
+            '    <input type="text" class="form-control stat_id chart_id" value="' + stat_id + '">' +
             '  </div>' +
             '  <div class="form-group input-group">' +
             '    <span class="input-group-addon">Chart Name</span>' +
-            '    <input type="text" class="form-control chart_name">' +
+            '    <input type="text" class="form-control chart_name" value="' + chart_name + '">' +
             '  </div>' +
             '</div>';
         $(elem_id).append(stat_chart_html);
     }
 
-    function add_info_chart(elem_id) {
+    function add_info_chart(elem_id, info_id, chart_name) {
+        info_id = typeof info_id !== 'undefined' ? info_id : "";
+        chart_name = typeof chart_name !== 'undefined' ? chart_name : "";
         var info_chart_html =
             '<div class="section_chart info_chart">' +
             '  <div class="form-group input-group">' +
             '    <span class="input-group-addon">Info ID</span>' +
-            '    <input type="text" class="form-control info_id chart_id">' +
+            '    <input type="text" class="form-control info_id chart_id" value="' + info_id + '">' +
             '  </div>' +
             '  <div class="form-group input-group">' +
             '    <span class="input-group-addon">Chart Name</span>' +
-            '    <input type="text" class="form-control chart_name">' +
+            '    <input type="text" class="form-control chart_name" value="' + chart_name + '">' +
             '  </div>' +
             '</div>';
         $(elem_id).append(info_chart_html);
@@ -95,4 +101,27 @@
       <button type="button" class="btn btn-default" onclick="add_section('#display_form')">Add Section</button>
     </div>
   </form>
+{% endblock %}
+
+{% block body_js %}
+{{ super() }}
+<script>
+var old_display_setting = {{ display_setting }};
+$(function() {
+    for (var i = 0; i < old_display_setting.length; ++i) {
+        var section_setting = old_display_setting[i];
+        var section_id_str = add_section('#display_form', section_setting.section_name);
+
+        var section_charts = section_setting.charts;
+        for (var j = 0; j < section_charts.length; ++j) {
+            var chart_setting = section_charts[j];
+            if (chart_setting.type == 'stat') {
+                add_stat_chart('#' + section_id_str, chart_setting.id, chart_setting.name);
+            } else {
+                add_info_chart('#' + section_id_str, chart_setting.id, chart_setting.name);
+            }
+        }
+    }
+});
+</script>
 {% endblock %}
