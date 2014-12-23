@@ -38,7 +38,7 @@ def send_alarm_email(host_id, alarm_setting):
     msg['Subject'] = 'Host %d failed' % host_id
     msg['From'] = from_addr
     msg['To'] = to_addrs[0]
-    msg['CC'] = to_addrs[1:]
+    msg['CC'] = ";".join(to_addrs[1:])
 
     server = smtplib.SMTP(_mail_server)
     # server.set_debuglevel(True)
